@@ -42,6 +42,20 @@ vendor/
 # Go workspace/module local files (optional)
 go.work.sum
 
+# --- Python / FastAPI ---
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# --- Local env files ---
+.env
+.env.local
+.env.*.local
+
 # --- Logs / temp ---
 *.log
 tmp/
@@ -52,4 +66,3 @@ temp/
 Thumbs.db
 .vscode/
 .idea/
-
