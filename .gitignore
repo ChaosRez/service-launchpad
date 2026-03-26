@@ -1,0 +1,55 @@
+
+# --- Terraform ---
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+*.tfvars
+*.tfvars.json
+
+# Keep lock file if you want reproducible provider versions.
+# Comment this out to track it.
+# .terraform.lock.hcl
+
+# --- Kubernetes / Helm / Kustomize ---
+*.kubeconfig
+.kube/
+kubeconfig
+kustomization.rendered.yaml
+*.generated.yaml
+helmfile.d/tmp/
+charts/*/charts/
+*.tgz
+
+# --- Go ---
+bin/
+dist/
+build/
+*.test
+*.out
+coverage.out
+cover.out
+*.coverprofile
+vendor/
+
+# Go workspace/module local files (optional)
+go.work.sum
+
+# --- Logs / temp ---
+*.log
+tmp/
+temp/
+
+# --- OS / Editor ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
