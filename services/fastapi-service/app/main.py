@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import time
 import uuid
 from typing import Literal
@@ -9,9 +10,11 @@ from fastapi import FastAPI, HTTPException, Request, Response
 from pydantic import BaseModel
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 
-
-DEFAULT_MODEL = "tinyllama-1.1b-chat-q4_k_m"
+DEFAULT_MODEL = os.getenv("FASTAPI_SERVICE_MODEL", "tinyllama-1.1b-chat-q4_k_m")
 RUNTIME_PROFILES = {"short": 300, "medium": 1200, "long": 3500}
+DEFAULT_RUNTIME_PROFILE = os.getenv("FASTAPI_SERVICE_DEFAULT_PROFILE", "medium")
+if DEFAULT_RUNTIME_PROFILE not in RUNTIME_PROFILES:
+    DEFAULT_RUNTIME_PROFILE = "medium"
 
 app = FastAPI(
     title="Service Launchpad FastAPI Service",
@@ -37,7 +40,7 @@ ERROR_COUNT = Counter(
 
 
 class ChatCompletionRequest(BaseModel):
-    runtime_profile: Literal["short", "medium", "long"] = "medium"
+    runtime_profile: Literal["short", "medium", "long"] = DEFAULT_RUNTIME_PROFILE
     stream: bool = False
 
 

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fastapi-service-config
+  namespace: service-launchpad-dev
+  labels:
+    app.kubernetes.io/name: fastapi-service
+    app.kubernetes.io/component: inference-simulator
+    app.kubernetes.io/part-of: service-launchpad
+data:
+  FASTAPI_SERVICE_MODEL: tinyllama-1.1b-chat-q4_k_m
+  FASTAPI_SERVICE_DEFAULT_PROFILE: medium
