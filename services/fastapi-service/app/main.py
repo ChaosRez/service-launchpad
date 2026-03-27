@@ -5,8 +5,9 @@ import time
 import uuid
 from typing import Literal
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request, Response
 from pydantic import BaseModel
+from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 
 
 DEFAULT_MODEL = "tinyllama-1.1b-chat-q4_k_m"
@@ -18,10 +19,47 @@ app = FastAPI(
     description="A tiny chat completion simulator with fixed responses and preset runtimes.",
 )
 
+REQUEST_COUNT = Counter(
+    "fastapi_service_requests_total",
+    "Total number of HTTP requests handled by the fastapi-service.",
+    ["method", "path", "status"],
+)
+REQUEST_LATENCY = Histogram(
+    "fastapi_service_request_duration_seconds",
+    "Latency of HTTP requests handled by the fastapi-service.",
+    ["method", "path"],
+)
+ERROR_COUNT = Counter(
+    "fastapi_service_errors_total",
+    "Total number of error responses returned by the fastapi-service.",
+    ["method", "path", "status"],
+)
+
 
 class ChatCompletionRequest(BaseModel):
     runtime_profile: Literal["short", "medium", "long"] = "medium"
     stream: bool = False
+
+
+@app.middleware("http")
+async def record_metrics(request: Request, call_next) -> Response:
+    started_at = time.perf_counter()
+    response: Response | None = None
+
+    try:
+        response = await call_next(request)
+        return response
+    finally:
+        path = request.url.path
+        method = request.method
+        status_code = str(response.status_code if response else 500)
+        elapsed = time.perf_counter() - started_at
+
+        REQUEST_COUNT.labels(method=method, path=path, status=status_code).inc()
+        REQUEST_LATENCY.labels(method=method, path=path).observe(elapsed)
+
+        if response is None or response.status_code >= 400:
+            ERROR_COUNT.labels(method=method, path=path, status=status_code).inc()
 
 
 @app.get("/health")
@@ -32,6 +70,11 @@ async def health() -> dict[str, str]:
 @app.get("/ready")
 async def ready() -> dict[str, str]:
     return {"status": "ready"}
+
+
+@app.get("/metrics")
+async def metrics() -> Response:
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.get("/v1/models")

@@ -6,6 +6,7 @@ This workload simulates a small `llama.cpp`-style chat completion service. It ke
 
 - `GET /health`: liveness-style health check
 - `GET /ready`: readiness-style status check
+- `GET /metrics`: Prometheus metrics endpoint
 - `GET /v1/models`: returns the exposed simulator model metadata
 - `POST /v1/chat/completions`: returns a fixed chat completion response with one of a few pre-defined runtimes
 
@@ -18,6 +19,14 @@ The simulator is intentionally predictable. Clients choose one pre-defined runti
 - `long`: slower request
 
 The response body is static apart from the generated id, timestamp, and selected runtime metadata.
+
+## Metrics
+
+The service exports Prometheus metrics for:
+
+- total request count
+- request latency
+- error count
 
 ## Local Run
 
