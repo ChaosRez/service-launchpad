@@ -5,6 +5,7 @@ This directory will hold local helper scripts for Minikube bootstrapping, deploy
 ## Available Scripts
 
 - `bootstrap-minikube.sh`: starts a local Minikube cluster, updates the `kubectl` context, enables `metrics-server`, and can print the Docker environment command for local image builds
+- `smoke-test-fastapi-service.sh`: boots Minikube, builds the service image, deploys the manifests, port-forwards the service, and validates the main endpoints
 
 ## Manual Minikube Commands
 

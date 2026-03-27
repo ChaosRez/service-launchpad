@@ -44,6 +44,23 @@ docker build -t service-launchpad/fastapi-service .
 docker run --rm -p 8000:8000 service-launchpad/fastapi-service
 ```
 
+## Kubernetes Deploy
+
+Build the image into Minikube's Docker daemon first, then apply the base manifests:
+
+```bash
+eval $(minikube -p service-launchpad docker-env)
+docker build -t service-launchpad/fastapi-service:dev services/fastapi-service
+kubectl apply -k k8s/base
+```
+
+Quick sanity check:
+```bash
+kubectl get configmap fastapi-service-config -n service-launchpad-dev -o yaml
+kubectl get svc fastapi-service -n service-launchpad-dev
+kubectl get deployment fastapi-service -n service-launchpad-dev -o yaml
+```
+
 ## Example Request
 
 ```bash

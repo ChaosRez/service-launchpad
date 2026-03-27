@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: service-launchpad-dev
+  labels:
+    app.kubernetes.io/name: service-launchpad
+    app.kubernetes.io/part-of: service-launchpad
+    app.kubernetes.io/environment: dev
