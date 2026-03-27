@@ -37,6 +37,13 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
+## Docker Run
+
+```bash
+docker build -t service-launchpad/fastapi-service .
+docker run --rm -p 8000:8000 service-launchpad/fastapi-service
+```
+
 ## Example Request
 
 ```bash
