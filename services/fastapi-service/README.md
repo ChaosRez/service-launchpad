@@ -82,22 +82,25 @@ Port forward to localhost
 kubectl port-forward svc/fastapi-service 8000:8000 -n service-launchpad-dev
 ```
 
-To trigger scale-up, send a burst of `long` requests in parallel:
+To trigger scale-up, use the load-test script with stronger defaults:
 
 ```bash
-for i in $(seq 1 120); do
-  curl -s -X POST http://127.0.0.1:8000/v1/chat/completions \
-    -H "Content-Type: application/json" \
-    -d '{"runtime_profile":"long"}' >/dev/null &
-done
-wait
+./scripts/load-test-fastapi-service.sh
 ```
 
-Watch the HPA and pod count in a second terminal:
+You can make it more aggressive if needed:
+
+```bash
+./scripts/load-test-fastapi-service.sh --requests 4000 --concurrency 200 --rounds 4 --profile long
+```
+
+Watch the HPA and pod count:
 
 ```bash
 kubectl get hpa -n service-launchpad-dev -w
 kubectl get pods -n service-launchpad-dev -w
+kubectl top pods -n service-launchpad-dev
+kubectl top pods -n service-launchpad-dev
 ```
 
 After the burst stops, give the HPA a few minutes and it should scale back down toward `1` replica.
