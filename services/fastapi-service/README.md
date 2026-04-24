@@ -18,7 +18,7 @@ The simulator is intentionally predictable. Clients choose one pre-defined runti
 - `medium`: default request
 - `long`: slower request
 
-The response body is static apart from the generated id, timestamp, and selected runtime metadata.
+The response body is static apart from the generated id, timestamp, and selected runtime metadata. Each profile also performs a small amount of real CPU work so the CPU-based HPA has something to react to during load tests.
 
 ## Metrics
 
@@ -59,7 +59,48 @@ Quick sanity check:
 kubectl get configmap fastapi-service-config -n service-launchpad-dev -o yaml
 kubectl get svc fastapi-service -n service-launchpad-dev
 kubectl get deployment fastapi-service -n service-launchpad-dev -o yaml
+kubectl get hpa fastapi-service -n service-launchpad-dev
 ```
+
+## Autoscaling
+
+The base manifests include a CPU-based `HorizontalPodAutoscaler`:
+
+- minimum replicas: `1`
+- maximum replicas: `5`
+- target CPU utilization: `60%`
+
+Useful commands while testing:
+
+```bash
+kubectl get hpa -n service-launchpad-dev -w
+kubectl top pods -n service-launchpad-dev
+kubectl describe hpa fastapi-service -n service-launchpad-dev
+```
+Port forward to localhost
+```bash
+kubectl port-forward svc/fastapi-service 8000:8000 -n service-launchpad-dev
+```
+
+To trigger scale-up, send a burst of `long` requests in parallel:
+
+```bash
+for i in $(seq 1 120); do
+  curl -s -X POST http://127.0.0.1:8000/v1/chat/completions \
+    -H "Content-Type: application/json" \
+    -d '{"runtime_profile":"long"}' >/dev/null &
+done
+wait
+```
+
+Watch the HPA and pod count in a second terminal:
+
+```bash
+kubectl get hpa -n service-launchpad-dev -w
+kubectl get pods -n service-launchpad-dev -w
+```
+
+After the burst stops, give the HPA a few minutes and it should scale back down toward `1` replica.
 
 ## Example Request
 

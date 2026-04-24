@@ -1,0 +1,23 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: fastapi-service
+  namespace: service-launchpad-dev
+  labels:
+    app.kubernetes.io/name: fastapi-service
+    app.kubernetes.io/component: inference-simulator
+    app.kubernetes.io/part-of: service-launchpad
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: fastapi-service
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60

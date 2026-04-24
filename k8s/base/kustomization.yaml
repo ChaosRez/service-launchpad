@@ -4,4 +4,5 @@ resources:
   - namespace.yaml
   - fastapi-service-configmap.yaml
   - fastapi-service-deployment.yaml
+  - fastapi-service-hpa.yaml
   - fastapi-service-service.yaml

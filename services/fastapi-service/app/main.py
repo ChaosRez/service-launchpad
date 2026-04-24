@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import os
 import time
 import uuid
@@ -12,6 +13,7 @@ from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_
 
 DEFAULT_MODEL = os.getenv("FASTAPI_SERVICE_MODEL", "tinyllama-1.1b-chat-q4_k_m")
 RUNTIME_PROFILES = {"short": 300, "medium": 1200, "long": 3500}
+CPU_WORK_UNITS = {"short": 2_000, "medium": 25_000, "long": 120_000}
 DEFAULT_RUNTIME_PROFILE = os.getenv("FASTAPI_SERVICE_DEFAULT_PROFILE", "medium")
 if DEFAULT_RUNTIME_PROFILE not in RUNTIME_PROFILES:
     DEFAULT_RUNTIME_PROFILE = "medium"
@@ -99,6 +101,7 @@ async def create_chat_completion(request: ChatCompletionRequest) -> dict:
         raise HTTPException(status_code=400, detail="Streaming is not implemented in the simulator.")
 
     duration_ms = RUNTIME_PROFILES[request.runtime_profile]
+    _do_cpu_work(CPU_WORK_UNITS[request.runtime_profile])
     await asyncio.sleep(duration_ms / 1000)
 
     return {
@@ -126,3 +129,10 @@ async def create_chat_completion(request: ChatCompletionRequest) -> dict:
             "duration_ms": duration_ms,
         },
     }
+
+
+def _do_cpu_work(iterations: int) -> None:
+    digest = hashlib.sha256()
+    for index in range(iterations):
+        digest.update(f"fastapi-service-{index}".encode("utf-8"))
+    digest.hexdigest()
