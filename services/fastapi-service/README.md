@@ -22,11 +22,22 @@ The response body is static apart from the generated id, timestamp, and selected
 
 ## Metrics
 
-The service exports Prometheus metrics for:
+The service exports Prometheus-compatible metrics for VictoriaMetrics:
 
 - total request count
 - request latency
 - error count
+
+## Tracing
+
+Set an OTLP HTTP traces endpoint before starting the service to enable exporting:
+
+```bash
+export OTEL_SERVICE_NAME=fastapi-service
+export OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://localhost:4318/v1/traces
+```
+
+The chat completion response includes a `simulation.trace_id` field can be correlated to a request with the exported trace.
 
 ## Local Run
 
@@ -99,7 +110,6 @@ Watch the HPA and pod count:
 ```bash
 kubectl get hpa -n service-launchpad-dev -w
 kubectl get pods -n service-launchpad-dev -w
-kubectl top pods -n service-launchpad-dev
 kubectl top pods -n service-launchpad-dev
 ```
 
