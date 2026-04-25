@@ -7,6 +7,5 @@ Service Launchpad is a small internal-platform prototype for registering and ope
 - `Minikube` as the default local Kubernetes path
 - `GKE` path for cloud deployment
 - `Terraform` for minimal `GCP` and `IAM` resources
-- `Prometheus` and `Grafana` for observability
 - `Victoria Metrics`, `Grafana Tempo`, and `Grafana` for observability with defined SLOs
 

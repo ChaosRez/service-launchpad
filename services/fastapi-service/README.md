@@ -6,7 +6,7 @@ This workload simulates a small `llama.cpp`-style chat completion service. It ke
 
 - `GET /health`: liveness-style health check
 - `GET /ready`: readiness-style status check
-- `GET /metrics`: Prometheus metrics endpoint
+- `GET /metrics`: Prometheus-format metrics endpoint for `VictoriaMetrics`
 - `GET /v1/models`: returns the exposed simulator model metadata
 - `POST /v1/chat/completions`: returns a fixed chat completion response with one of a few pre-defined runtimes
 
@@ -22,7 +22,7 @@ The response body is static apart from the generated id, timestamp, and selected
 
 ## Metrics
 
-The service exports Prometheus-compatible metrics for VictoriaMetrics:
+The service exports Prometheus-format metrics for `VictoriaMetrics`:
 
 - total request count
 - request latency

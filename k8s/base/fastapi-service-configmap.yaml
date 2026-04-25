@@ -11,4 +11,4 @@ data:
   FASTAPI_SERVICE_MODEL: tinyllama-1.1b-chat-q4_k_m
   FASTAPI_SERVICE_DEFAULT_PROFILE: medium
   OTEL_SERVICE_NAME: fastapi-service
-  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: ""
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://tempo.service-launchpad-observability.svc.cluster.local:4318/v1/traces
