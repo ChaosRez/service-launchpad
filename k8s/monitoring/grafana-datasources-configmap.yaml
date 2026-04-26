@@ -11,11 +11,26 @@ data:
     apiVersion: 1
     datasources:
       - name: VictoriaMetrics
+        uid: victoriametrics
         type: prometheus
         access: proxy
         url: http://victoriametrics.service-launchpad-observability.svc.cluster.local:8428
         isDefault: true
       - name: Tempo
+        uid: tempo
         type: tempo
         access: proxy
         url: http://tempo.service-launchpad-observability.svc.cluster.local:3200
+        jsonData:
+          nodeGraph:
+            enabled: true
+          search:
+            hide: false
+          serviceMap:
+            datasourceUid: victoriametrics
+          tracesToMetrics:
+            datasourceUid: victoriametrics
+          traceQuery:
+            timeShiftEnabled: true
+            spanStartTimeShift: 30m
+            spanEndTimeShift: 30m

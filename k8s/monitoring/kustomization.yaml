@@ -2,6 +2,11 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - namespace.yaml
+  - kube-state-metrics-serviceaccount.yaml
+  - kube-state-metrics-clusterrole.yaml
+  - kube-state-metrics-clusterrolebinding.yaml
+  - kube-state-metrics-deployment.yaml
+  - kube-state-metrics-service.yaml
   - victoriametrics-configmap.yaml
   - victoriametrics-deployment.yaml
   - victoriametrics-service.yaml
@@ -9,5 +14,7 @@ resources:
   - tempo-deployment.yaml
   - tempo-service.yaml
   - grafana-datasources-configmap.yaml
+  - grafana-dashboard-providers-configmap.yaml
+  - grafana-fastapi-dashboard-configmap.yaml
   - grafana-deployment.yaml
   - grafana-service.yaml

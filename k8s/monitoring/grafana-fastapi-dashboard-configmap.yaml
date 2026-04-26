@@ -1,0 +1,358 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-fastapi-dashboard
+  namespace: service-launchpad-observability
+  labels:
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/part-of: service-launchpad
+data:
+  fastapi-service-observability.json: |
+    {
+      "annotations": {
+        "list": []
+      },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 0,
+      "links": [],
+      "panels": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "max": 100,
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "orange",
+                    "value": 99.9
+                  },
+                  {
+                    "color": "green",
+                    "value": 99.95
+                  }
+                ]
+              },
+              "unit": "percent"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 6,
+            "x": 0,
+            "y": 0
+          },
+          "id": 1,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "center",
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            }
+          },
+          "targets": [
+            {
+              "editorMode": "code",
+              "expr": "100 * (1 - (sum(rate(fastapi_service_errors_total{path=\"/v1/chat/completions\"}[$__rate_interval])) / clamp_min(sum(rate(fastapi_service_requests_total{path=\"/v1/chat/completions\"}[$__rate_interval])), 0.0001)))",
+              "legendFormat": "availability",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "Availability SLI",
+          "type": "stat"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "max": 100,
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "orange",
+                    "value": 95
+                  },
+                  {
+                    "color": "green",
+                    "value": 99
+                  }
+                ]
+              },
+              "unit": "percent"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 6,
+            "x": 6,
+            "y": 0
+          },
+          "id": 2,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "center",
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            }
+          },
+          "targets": [
+            {
+              "editorMode": "code",
+              "expr": "100 * (sum(rate(fastapi_service_request_duration_seconds_bucket{path=\"/v1/chat/completions\",le=\"0.2\"}[$__rate_interval])) / clamp_min(sum(rate(fastapi_service_request_duration_seconds_count{path=\"/v1/chat/completions\"}[$__rate_interval])), 0.0001))",
+              "legendFormat": "latency_sli",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "Latency SLI (<200ms)",
+          "type": "stat"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 4
+          },
+          "id": 3,
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi"
+            }
+          },
+          "targets": [
+            {
+              "editorMode": "code",
+              "exemplar": true,
+              "expr": "sum(rate(fastapi_service_requests_total{path=\"/v1/chat/completions\"}[$__rate_interval]))",
+              "legendFormat": "requests/sec",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "Request Rate",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 4
+          },
+          "id": 4,
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi"
+            }
+          },
+          "targets": [
+            {
+              "editorMode": "code",
+              "exemplar": true,
+              "expr": "histogram_quantile(0.95, sum(rate(fastapi_service_request_duration_seconds_bucket{path=\"/v1/chat/completions\"}[$__rate_interval])) by (le))",
+              "legendFormat": "p95 latency",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "P95 Latency",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 12
+          },
+          "id": 5,
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi"
+            }
+          },
+          "targets": [
+            {
+              "editorMode": "code",
+              "exemplar": true,
+              "expr": "sum(rate(fastapi_service_errors_total{path=\"/v1/chat/completions\"}[$__rate_interval]))",
+              "legendFormat": "errors/sec",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "Error Rate",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 12
+          },
+          "id": 6,
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi"
+            }
+          },
+          "targets": [
+            {
+              "editorMode": "code",
+              "expr": "kube_horizontalpodautoscaler_status_current_replicas{namespace=\"service-launchpad-dev\",horizontalpodautoscaler=\"fastapi-service\"}",
+              "legendFormat": "current replicas",
+              "range": true,
+              "refId": "A"
+            },
+            {
+              "editorMode": "code",
+              "expr": "kube_horizontalpodautoscaler_status_desired_replicas{namespace=\"service-launchpad-dev\",horizontalpodautoscaler=\"fastapi-service\"}",
+              "legendFormat": "desired replicas",
+              "range": true,
+              "refId": "B"
+            },
+            {
+              "editorMode": "code",
+              "expr": "kube_deployment_status_replicas_available{namespace=\"service-launchpad-dev\",deployment=\"fastapi-service\"}",
+              "legendFormat": "available replicas",
+              "range": true,
+              "refId": "C"
+            }
+          ],
+          "title": "Replica Behavior",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 24,
+            "x": 0,
+            "y": 20
+          },
+          "id": 7,
+          "options": {
+            "content": "<h3>Trace correlation</h3><p>Request rate, latency, and error panels have exemplars enabled. Hover points on those charts and jump into Tempo when exemplar data is present.</p><p>You can also use the <code>simulation.trace_id</code> field returned by <code>/v1/chat/completions</code> in Grafana Explore with the Tempo datasource.</p>",
+            "mode": "html"
+          },
+          "title": "Tempo Workflow",
+          "type": "text"
+        }
+      ],
+      "refresh": "15s",
+      "schemaVersion": 39,
+      "style": "dark",
+      "tags": [
+        "service-launchpad",
+        "fastapi-service",
+        "victoriametrics",
+        "tempo"
+      ],
+      "templating": {
+        "list": []
+      },
+      "time": {
+        "from": "now-30m",
+        "to": "now"
+      },
+      "timezone": "",
+      "title": "FastAPI Service Observability",
+      "uid": "fastapi-service-observability",
+      "version": 1,
+      "weekStart": ""
+    }
