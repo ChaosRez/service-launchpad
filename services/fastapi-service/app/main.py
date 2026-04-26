@@ -15,7 +15,8 @@ from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from pydantic import BaseModel
-from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
+from prometheus_client import Counter, Histogram
+from prometheus_client.openmetrics.exposition import CONTENT_TYPE_LATEST, generate_latest
 
 DEFAULT_MODEL = os.getenv("FASTAPI_SERVICE_MODEL", "tinyllama-1.1b-chat-q4_k_m")
 RUNTIME_PROFILES = {"short": 300, "medium": 1200, "long": 3500}
@@ -41,6 +42,7 @@ REQUEST_LATENCY = Histogram(
     "fastapi_service_request_duration_seconds",
     "Latency of HTTP requests handled by the fastapi-service.",
     ["method", "path"],
+    buckets=(0.05, 0.1, 0.2, 0.3, 0.5, 1.0, 2.0, 4.0, 8.0),
 )
 ERROR_COUNT = Counter(
     "fastapi_service_errors_total",
@@ -67,12 +69,13 @@ async def record_metrics(request: Request, call_next) -> Response:
         method = request.method
         status_code = str(response.status_code if response else 500)
         elapsed = time.perf_counter() - started_at
+        exemplar = _current_trace_exemplar()
 
-        REQUEST_COUNT.labels(method=method, path=path, status=status_code).inc()
-        REQUEST_LATENCY.labels(method=method, path=path).observe(elapsed)
+        REQUEST_COUNT.labels(method=method, path=path, status=status_code).inc(exemplar=exemplar)
+        REQUEST_LATENCY.labels(method=method, path=path).observe(elapsed, exemplar=exemplar)
 
         if response is None or response.status_code >= 400:
-            ERROR_COUNT.labels(method=method, path=path, status=status_code).inc()
+            ERROR_COUNT.labels(method=method, path=path, status=status_code).inc(exemplar=exemplar)
 
 
 @app.get("/health")
@@ -149,6 +152,13 @@ def _do_cpu_work(iterations: int) -> None:
     for index in range(iterations):
         digest.update(f"fastapi-service-{index}".encode("utf-8"))
     digest.hexdigest()
+
+
+def _current_trace_exemplar() -> dict[str, str] | None:
+    span_context = trace.get_current_span().get_span_context()
+    if not span_context.is_valid:
+        return None
+    return {"trace_id": format(span_context.trace_id, "032x")}
 
 
 def _configure_telemetry():
