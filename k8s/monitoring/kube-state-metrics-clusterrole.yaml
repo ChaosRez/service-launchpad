@@ -1,6 +1,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
+  # Cluster-wide read permissions so kube-state-metrics can watch deploy/HPA state.
   name: service-launchpad-kube-state-metrics
   labels:
     app.kubernetes.io/name: kube-state-metrics

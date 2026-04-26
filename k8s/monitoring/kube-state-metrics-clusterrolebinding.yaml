@@ -1,6 +1,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
+  # Binds the kube-state-metrics ServiceAccount to the read-only ClusterRole above.
   name: service-launchpad-kube-state-metrics
   labels:
     app.kubernetes.io/name: kube-state-metrics
