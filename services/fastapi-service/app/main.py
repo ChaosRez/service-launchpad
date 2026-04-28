@@ -16,6 +16,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from pydantic import BaseModel
 from prometheus_client import Counter, Histogram
+from prometheus_client.registry import REGISTRY
 from prometheus_client.openmetrics.exposition import CONTENT_TYPE_LATEST, generate_latest
 
 DEFAULT_MODEL = os.getenv("FASTAPI_SERVICE_MODEL", "tinyllama-1.1b-chat-q4_k_m")
@@ -90,7 +91,7 @@ async def ready() -> dict[str, str]:
 
 @app.get("/metrics")
 async def metrics() -> Response:
-    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
+    return Response(content=generate_latest(REGISTRY), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.get("/v1/models")
