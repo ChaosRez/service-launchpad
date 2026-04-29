@@ -116,7 +116,7 @@ async def create_chat_completion(request: ChatCompletionRequest) -> dict:
         span.set_attribute("fastapi_service.runtime_profile", request.runtime_profile)
 
         duration_ms = RUNTIME_PROFILES[request.runtime_profile]
-        _do_cpu_work(CPU_WORK_UNITS[request.runtime_profile])
+        await asyncio.to_thread(_do_cpu_work, CPU_WORK_UNITS[request.runtime_profile])
         await asyncio.sleep(duration_ms / 1000)
 
         trace_id = format(span.get_span_context().trace_id, "032x")

@@ -35,12 +35,16 @@ spec:
               port: http
             initialDelaySeconds: 3
             periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 6
           livenessProbe:
             httpGet:
               path: /health
               port: http
             initialDelaySeconds: 5
             periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 6
           resources:
             requests:
               cpu: 100m

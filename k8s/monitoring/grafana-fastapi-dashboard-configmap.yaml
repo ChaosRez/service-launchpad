@@ -70,7 +70,7 @@ data:
           "targets": [
             {
               "editorMode": "code",
-              "expr": "100 * (1 - (sum(rate(fastapi_service_errors_total{path=\"/v1/chat/completions\"}[$__rate_interval])) / clamp_min(sum(rate(fastapi_service_requests_total{path=\"/v1/chat/completions\"}[$__rate_interval])), 0.0001)))",
+              "expr": "100 * (1 - (((sum(rate(fastapi_service_errors_total{path=\"/v1/chat/completions\"}[$__rate_interval])) ) or on() vector(0)) / clamp_min(sum(rate(fastapi_service_requests_total{path=\"/v1/chat/completions\"}[$__rate_interval])), 0.0001)))",
               "legendFormat": "availability",
               "range": true,
               "refId": "A"
@@ -252,7 +252,7 @@ data:
             {
               "editorMode": "code",
               "exemplar": true,
-              "expr": "sum(rate(fastapi_service_errors_total{path=\"/v1/chat/completions\"}[$__rate_interval]))",
+              "expr": "(sum(rate(fastapi_service_errors_total{path=\"/v1/chat/completions\"}[$__rate_interval])) ) or on() vector(0)",
               "legendFormat": "errors/sec",
               "range": true,
               "refId": "A"
