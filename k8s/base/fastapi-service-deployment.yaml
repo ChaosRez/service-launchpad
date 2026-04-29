@@ -29,6 +29,14 @@ spec:
           envFrom:
             - configMapRef:
                 name: fastapi-service-config
+          startupProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 12
           readinessProbe:
             httpGet:
               path: /ready
@@ -41,14 +49,14 @@ spec:
             httpGet:
               path: /health
               port: http
-            initialDelaySeconds: 5
-            periodSeconds: 10
+            initialDelaySeconds: 20
+            periodSeconds: 15
             timeoutSeconds: 2
-            failureThreshold: 6
+            failureThreshold: 10
           resources:
             requests:
               cpu: 100m
               memory: 128Mi
             limits:
-              cpu: 500m
+              cpu: 1000m
               memory: 256Mi

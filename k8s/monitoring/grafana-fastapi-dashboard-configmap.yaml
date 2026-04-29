@@ -132,13 +132,13 @@ data:
           "targets": [
             {
               "editorMode": "code",
-              "expr": "100 * (sum(rate(fastapi_service_request_duration_seconds_bucket{path=\"/v1/chat/completions\",le=\"0.2\"}[$__rate_interval])) / clamp_min(sum(rate(fastapi_service_request_duration_seconds_count{path=\"/v1/chat/completions\"}[$__rate_interval])), 0.0001))",
+              "expr": "100 * (sum(rate(fastapi_service_request_duration_seconds_bucket{path=\"/v1/chat/completions\",le=\"0.5\"}[$__rate_interval])) / clamp_min(sum(rate(fastapi_service_request_duration_seconds_count{path=\"/v1/chat/completions\"}[$__rate_interval])), 0.0001))",
               "legendFormat": "latency_sli",
               "range": true,
               "refId": "A"
             }
           ],
-          "title": "Latency SLI (<200ms)",
+          "title": "Latency SLI (<500ms)",
           "type": "stat"
         },
         {
