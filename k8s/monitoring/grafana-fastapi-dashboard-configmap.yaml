@@ -313,25 +313,6 @@ data:
           ],
           "title": "Replica Behavior",
           "type": "timeseries"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "victoriametrics"
-          },
-          "gridPos": {
-            "h": 5,
-            "w": 24,
-            "x": 0,
-            "y": 20
-          },
-          "id": 7,
-          "options": {
-            "content": "<h3>Trace correlation</h3><p>Request rate, latency, and error panels have exemplars enabled. Hover points on those charts and jump into Tempo when exemplar data is present.</p><p>You can also use the <code>simulation.trace_id</code> field returned by <code>/v1/chat/completions</code> in Grafana Explore with the Tempo datasource.</p>",
-            "mode": "html"
-          },
-          "title": "Tempo Workflow",
-          "type": "text"
         }
       ],
       "refresh": "15s",

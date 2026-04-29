@@ -37,7 +37,11 @@ export OTEL_SERVICE_NAME=fastapi-service
 export OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://localhost:4318/v1/traces
 ```
 
-The chat completion response includes a `simulation.trace_id` field can be correlated to a request with the exported trace.
+The chat completion response includes a `simulation.trace_id` field that can be used to find the request in Grafana Explore with the `Tempo` datasource.
+
+When `VictoriaMetrics` is the metrics backend, Grafana trace drilldown is not the same as exemplar-backed Prometheus/Mimir workflows. For this stack, use:
+- Grafana Explore with the `Tempo` datasource and `simulation.trace_id`
+- Grafana correlations, if you want explicit navigation from metric views toward traces
 
 ## Local Run
 

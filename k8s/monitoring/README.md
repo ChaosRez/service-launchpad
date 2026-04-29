@@ -33,3 +33,4 @@ kubectl port-forward svc/tempo 3200:3200 -n service-launchpad-observability
 - trace export is configured through the `fastapi-service` ConfigMap in `k8s/base`
 - the starter dashboard includes request rate, p95 latency, error rate, availability SLI, latency SLI, and replica behavior
 - Grafana provisions the dashboard into the `Service Launchpad` folder on startup
+- `VictoriaMetrics` stores Prometheus-format metrics, but it does not support exemplar-backed jump-to-trace navigation the same way Prometheus/Mimir do. Use Grafana Explore with the `Tempo` datasource or configure Grafana correlations to move from metrics toward traces.
