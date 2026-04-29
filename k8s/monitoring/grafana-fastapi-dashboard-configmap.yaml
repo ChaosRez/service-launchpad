@@ -309,6 +309,13 @@ data:
               "legendFormat": "available replicas",
               "range": true,
               "refId": "C"
+            },
+            {
+              "editorMode": "code",
+              "expr": "kube_deployment_status_replicas_unavailable{namespace=\"service-launchpad-dev\",deployment=\"fastapi-service\"}",
+              "legendFormat": "unavailable replicas",
+              "range": true,
+              "refId": "D"
             }
           ],
           "title": "Replica Behavior",
