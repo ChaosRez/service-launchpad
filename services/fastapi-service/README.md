@@ -92,21 +92,23 @@ kubectl get hpa -n service-launchpad-dev -w
 kubectl top pods -n service-launchpad-dev
 kubectl describe hpa fastapi-service -n service-launchpad-dev
 ```
-Port forward to localhost
+
+To trigger scale-up, use the `k6`-based in-cluster load script:
+
 ```bash
-kubectl port-forward svc/fastapi-service 8000:8000 -n service-launchpad-dev
+./scripts/load-test-fastapi-service.sh --profile long --rate 35 --duration 6m
 ```
 
-To trigger scale-up, use the load-test script with stronger defaults:
+This is the preferred path because it:
+
+- avoids `kubectl port-forward` dropping under heavy load
+- targets the Kubernetes service DNS directly from inside the cluster
+- writes `k6_*` metrics into `VictoriaMetrics` so Grafana can show both service behavior and load-generator behavior
+
+gentler run for latency:
 
 ```bash
-./scripts/load-test-fastapi-service.sh
-```
-
-You can make it more aggressive if needed:
-
-```bash
-./scripts/load-test-fastapi-service.sh --requests 4000 --concurrency 200 --rounds 4 --profile long
+./scripts/load-test-fastapi-service.sh --profile short --rate 12 --duration 4m
 ```
 
 Watch the HPA and pod count:
@@ -118,6 +120,11 @@ kubectl top pods -n service-launchpad-dev
 ```
 
 After the burst stops, give the HPA a few minutes and it should scale back down toward `1` replica.
+
+Grafana dashboards:
+
+- `FastAPI Service Observability` for application latency, throughput, errors, and replica behavior
+- `k6 Load Testing` for the generator-side request rate, failure rate, VUs, and per-run filtering by `testid`
 
 ## Example Request
 

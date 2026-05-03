@@ -52,5 +52,9 @@ spec:
           configMap:
             name: grafana-dashboard-providers
         - name: dashboards
-          configMap:
-            name: grafana-fastapi-dashboard
+          projected:
+            sources:
+              - configMap:
+                  name: grafana-fastapi-dashboard
+              - configMap:
+                  name: grafana-k6-dashboard

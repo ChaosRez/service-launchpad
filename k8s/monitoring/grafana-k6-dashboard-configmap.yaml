@@ -1,0 +1,228 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-k6-dashboard
+  namespace: service-launchpad-observability
+  labels:
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/part-of: service-launchpad
+data:
+  k6-load-testing.json: |
+    {
+      "annotations": {
+        "list": []
+      },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 0,
+      "links": [],
+      "panels": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 0
+          },
+          "id": 1,
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi"
+            }
+          },
+          "targets": [
+            {
+              "editorMode": "code",
+              "expr": "sum(rate(k6_http_reqs_total{testid=~\"$testid\"}[$__rate_interval]))",
+              "legendFormat": "requests/sec",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "k6 Request Rate",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 0
+          },
+          "id": 2,
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi"
+            }
+          },
+          "targets": [
+            {
+              "editorMode": "code",
+              "expr": "max(k6_http_req_duration_seconds{testid=~\"$testid\",stat=\"p(95)\"})",
+              "legendFormat": "p95 duration",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "k6 P95 Duration",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "max": 100,
+              "min": 0,
+              "unit": "percent"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 8
+          },
+          "id": 3,
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi"
+            }
+          },
+          "targets": [
+            {
+              "editorMode": "code",
+              "expr": "100 * max(k6_http_req_failed_rate{testid=~\"$testid\"})",
+              "legendFormat": "failed requests",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "k6 Failure Rate",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 8
+          },
+          "id": 4,
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi"
+            }
+          },
+          "targets": [
+            {
+              "editorMode": "code",
+              "expr": "max(k6_vus{testid=~\"$testid\"})",
+              "legendFormat": "active vus",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "k6 Active VUs",
+          "type": "timeseries"
+        }
+      ],
+      "refresh": "15s",
+      "schemaVersion": 39,
+      "style": "dark",
+      "tags": [
+        "service-launchpad",
+        "k6",
+        "victoriametrics"
+      ],
+      "templating": {
+        "list": [
+          {
+            "current": {
+              "selected": false,
+              "text": ".*",
+              "value": ".*"
+            },
+            "datasource": {
+              "type": "prometheus",
+              "uid": "victoriametrics"
+            },
+            "definition": "label_values(k6_http_reqs_total, testid)",
+            "hide": 0,
+            "includeAll": true,
+            "label": "testid",
+            "multi": false,
+            "name": "testid",
+            "options": [],
+            "query": {
+              "qryType": 1,
+              "query": "label_values(k6_http_reqs_total, testid)",
+              "refId": "PrometheusVariableQueryEditor-VariableQuery"
+            },
+            "refresh": 2,
+            "regex": "",
+            "skipUrlSync": false,
+            "sort": 3,
+            "type": "query"
+          }
+        ]
+      },
+      "time": {
+        "from": "now-30m",
+        "to": "now"
+      },
+      "timezone": "",
+      "title": "k6 Load Testing",
+      "uid": "k6-load-testing",
+      "version": 1,
+      "weekStart": ""
+    }
