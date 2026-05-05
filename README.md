@@ -8,4 +8,5 @@ Service Launchpad is a small internal-platform prototype for registering and ope
 - `GKE` path for cloud deployment
 - `Terraform` for minimal `GCP` and `IAM` resources
 - `Victoria Metrics`, `Grafana Tempo`, and `Grafana` for observability with defined SLOs
+- `Grafana Mimir` for strategic long-term metrics storage practice
 

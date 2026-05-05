@@ -19,6 +19,13 @@ spec:
         app.kubernetes.io/component: long-term-metrics-store
         app.kubernetes.io/part-of: service-launchpad
     spec:
+      initContainers:
+        - name: create-dirs
+          image: busybox:latest
+          command: ['sh', '-c', 'mkdir -p /mimir/data/rules && chown -R 10001:10001 /mimir/data']
+          volumeMounts:
+            - name: data
+              mountPath: /mimir/data
       containers:
         - name: mimir
           image: grafana/mimir:2.17.3
