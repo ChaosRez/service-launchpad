@@ -1,0 +1,55 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mimir-config
+  namespace: service-launchpad-observability
+  labels:
+    app.kubernetes.io/name: mimir
+    app.kubernetes.io/part-of: service-launchpad
+data:
+  mimir.yaml: |
+    usage_stats:
+      enabled: false
+
+    server:
+      http_listen_port: 9009
+      grpc_listen_port: 9095
+
+    multitenancy_enabled: false
+
+    common:
+      storage:
+        backend: filesystem
+        filesystem:
+          dir: /mimir/data/blocks
+
+    blocks_storage:
+      backend: filesystem
+      filesystem:
+        dir: /mimir/data/tsdb
+      bucket_store:
+        sync_dir: /mimir/data/tsdb-sync
+
+    compactor:
+      data_dir: /mimir/data/compactor
+
+    ruler_storage:
+      backend: local
+      local:
+        directory: /mimir/data/rules
+
+    alertmanager_storage:
+      backend: local
+      local:
+        path: /mimir/data/alertmanager
+
+    ingester:
+      ring:
+        replication_factor: 1
+
+    store_gateway:
+      sharding_ring:
+        replication_factor: 1
+
+    memberlist:
+      abort_if_cluster_join_fails: false

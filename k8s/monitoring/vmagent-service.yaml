@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: vmagent
+  namespace: service-launchpad-observability
+  labels:
+    app.kubernetes.io/name: vmagent
+    app.kubernetes.io/component: metrics-agent
+    app.kubernetes.io/part-of: service-launchpad
+spec:
+  selector:
+    app.kubernetes.io/name: vmagent
+  ports:
+    - name: http
+      port: 8429
+      targetPort: http
+  type: ClusterIP

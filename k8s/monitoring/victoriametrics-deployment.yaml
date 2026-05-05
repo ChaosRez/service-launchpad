@@ -23,14 +23,11 @@ spec:
         - name: victoriametrics
           image: victoriametrics/victoria-metrics:v1.102.1
           args:
-            - -promscrape.config=/etc/victoriametrics/prometheus.yml
             - -storageDataPath=/victoria-metrics-data
           ports:
             - name: http
               containerPort: 8428
           volumeMounts:
-            - name: config
-              mountPath: /etc/victoriametrics
             - name: data
               mountPath: /victoria-metrics-data
           resources:
@@ -41,8 +38,5 @@ spec:
               cpu: 500m
               memory: 512Mi
       volumes:
-        - name: config
-          configMap:
-            name: victoriametrics-config
         - name: data
           emptyDir: {}

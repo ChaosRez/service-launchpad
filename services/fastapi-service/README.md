@@ -103,7 +103,7 @@ This is the preferred path because it:
 
 - avoids `kubectl port-forward` dropping under heavy load
 - targets the Kubernetes service DNS directly from inside the cluster
-- writes `k6_*` metrics into `VictoriaMetrics` so Grafana can show both service behavior and load-generator behavior
+- writes `k6_*` metrics into `vmagent`, which replicates them to both `VictoriaMetrics` and `Mimir`, so Grafana can show both service behavior and load-generator behavior across the local and long-term stores
 
 gentler run for latency:
 
@@ -125,6 +125,7 @@ Grafana dashboards:
 
 - `FastAPI Service Observability` for application latency, throughput, errors, and replica behavior
 - `k6 Load Testing` for the generator-side request rate, failure rate, VUs, and per-run filtering by `testid`
+- `Metrics Storage Comparison` for side-by-side queries against `VictoriaMetrics` and `Mimir`
 
 ## Example Request
 

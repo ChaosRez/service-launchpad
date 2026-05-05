@@ -7,9 +7,14 @@ resources:
   - kube-state-metrics-clusterrolebinding.yaml
   - kube-state-metrics-deployment.yaml
   - kube-state-metrics-service.yaml
-  - victoriametrics-configmap.yaml
   - victoriametrics-deployment.yaml
   - victoriametrics-service.yaml
+  - mimir-configmap.yaml
+  - mimir-deployment.yaml
+  - mimir-service.yaml
+  - vmagent-configmap.yaml
+  - vmagent-deployment.yaml
+  - vmagent-service.yaml
   - tempo-configmap.yaml
   - tempo-deployment.yaml
   - tempo-service.yaml
@@ -17,5 +22,6 @@ resources:
   - grafana-dashboard-providers-configmap.yaml
   - grafana-fastapi-dashboard-configmap.yaml
   - grafana-k6-dashboard-configmap.yaml
+  - grafana-storage-comparison-dashboard-configmap.yaml
   - grafana-deployment.yaml
   - grafana-service.yaml

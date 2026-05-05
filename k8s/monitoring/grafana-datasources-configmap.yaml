@@ -16,6 +16,11 @@ data:
         access: proxy
         url: http://victoriametrics.service-launchpad-observability.svc.cluster.local:8428
         isDefault: true
+      - name: Mimir
+        uid: mimir
+        type: prometheus
+        access: proxy
+        url: http://mimir.service-launchpad-observability.svc.cluster.local:9009/prometheus
       - name: Tempo
         uid: tempo
         type: tempo

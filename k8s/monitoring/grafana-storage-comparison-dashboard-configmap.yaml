@@ -1,0 +1,174 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-storage-comparison-dashboard
+  namespace: service-launchpad-observability
+  labels:
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/part-of: service-launchpad
+data:
+  metrics-storage-comparison.json: |
+    {
+      "annotations": {
+        "list": []
+      },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 0,
+      "links": [],
+      "panels": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 0
+          },
+          "id": 1,
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "editorMode": "code",
+              "expr": "sum(rate(fastapi_service_requests_total{path=\"/v1/chat/completions\"}[$__rate_interval]))",
+              "legendFormat": "VictoriaMetrics",
+              "range": true,
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "mimir"
+              },
+              "editorMode": "code",
+              "expr": "sum(rate(fastapi_service_requests_total{path=\"/v1/chat/completions\"}[$__rate_interval]))",
+              "legendFormat": "Mimir",
+              "range": true,
+              "refId": "B"
+            }
+          ],
+          "title": "FastAPI Request Rate: Local vs Long-Term Store",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 0
+          },
+          "id": 2,
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "editorMode": "code",
+              "expr": "sum(rate(k6_http_reqs_total[$__rate_interval]))",
+              "legendFormat": "VictoriaMetrics",
+              "range": true,
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "mimir"
+              },
+              "editorMode": "code",
+              "expr": "sum(rate(k6_http_reqs_total[$__rate_interval]))",
+              "legendFormat": "Mimir",
+              "range": true,
+              "refId": "B"
+            }
+          ],
+          "title": "k6 Request Rate: Local vs Long-Term Store",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 8
+          },
+          "id": 3,
+          "options": {
+            "content": "Use `kubectl top pods -n service-launchpad-observability` to compare live CPU and memory footprint for `victoriametrics`, `vmagent`, and `mimir` in Minikube. This dashboard focuses on data parity across the two metric stores.",
+            "mode": "markdown"
+          },
+          "title": "Footprint Check",
+          "type": "text"
+        }
+      ],
+      "refresh": "15s",
+      "schemaVersion": 39,
+      "style": "dark",
+      "tags": [
+        "service-launchpad",
+        "victoriametrics",
+        "mimir"
+      ],
+      "templating": {
+        "list": []
+      },
+      "time": {
+        "from": "now-30m",
+        "to": "now"
+      },
+      "timezone": "",
+      "title": "Metrics Storage Comparison",
+      "uid": "metrics-storage-comparison",
+      "version": 1,
+      "weekStart": ""
+    }

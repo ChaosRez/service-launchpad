@@ -58,3 +58,5 @@ spec:
                   name: grafana-fastapi-dashboard
               - configMap:
                   name: grafana-k6-dashboard
+              - configMap:
+                  name: grafana-storage-comparison-dashboard

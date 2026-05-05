@@ -163,7 +163,7 @@ fi
 
 CONFIGMAP_NAME="k6-script-${SAFE_TEST_ID}"
 JOB_NAME="k6-loadtest-${SAFE_TEST_ID}"
-REMOTE_WRITE_URL="http://victoriametrics.${OBSERVABILITY_NAMESPACE}.svc.cluster.local:8428/api/v1/write"
+REMOTE_WRITE_URL="http://vmagent.${OBSERVABILITY_NAMESPACE}.svc.cluster.local:8429/api/v1/write"
 RUN_SUCCESS="false"
 JOB_CREATED="false"
 
@@ -276,7 +276,7 @@ if kubectl wait --for=condition=complete "job/${JOB_NAME}" -n "${TEST_NAMESPACE}
   echo "k6 Job completed successfully."
   echo "Grafana tips:"
   echo "  - FastAPI dashboard: watch service latency, throughput, and HPA behavior"
-  echo "  - Explore / VictoriaMetrics: query k6_* metrics filtered by testid=\"${TEST_ID}\""
+echo "  - Explore / VictoriaMetrics or Mimir: query k6_* metrics filtered by testid=\"${TEST_ID}\""
   echo "  - Explore / Tempo: traces still come from fastapi-service itself"
 else
   echo
