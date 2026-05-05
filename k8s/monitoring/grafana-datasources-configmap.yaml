@@ -39,3 +39,10 @@ data:
             timeShiftEnabled: true
             spanStartTimeShift: 30m
             spanEndTimeShift: 30m
+      - name: Loki
+        uid: loki
+        type: loki
+        access: proxy
+        url: http://loki.service-launchpad-observability.svc.cluster.local:3100
+        jsonData:
+          maxLines: 1000

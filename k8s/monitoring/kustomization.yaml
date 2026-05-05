@@ -18,6 +18,14 @@ resources:
   - tempo-configmap.yaml
   - tempo-deployment.yaml
   - tempo-service.yaml
+  - loki-configmap.yaml
+  - loki-deployment.yaml
+  - loki-service.yaml
+  - promtail-configmap.yaml
+  - promtail-serviceaccount.yaml
+  - promtail-clusterrole.yaml
+  - promtail-clusterrolebinding.yaml
+  - promtail-daemonset.yaml
   - grafana-datasources-configmap.yaml
   - grafana-dashboard-providers-configmap.yaml
   - grafana-fastapi-dashboard-configmap.yaml

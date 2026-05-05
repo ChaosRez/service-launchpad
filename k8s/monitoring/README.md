@@ -7,6 +7,8 @@ This directory contains a lightweight local observability stack for Service Laun
 - `vmagent` as the shared scrape and remote-write fanout layer
 - `kube-state-metrics` for deployment and HPA state
 - `Grafana Tempo` as the trace backend
+- `Grafana Loki` as the log backend
+- `Promtail` as the log shipper
 - `Grafana` with datasources and starter dashboards pre-provisioned
 
 For local development, `Mimir` is intentionally deployed in a single-process, filesystem-backed form. That keeps Task 11b lightweight enough for Minikube while still demonstrating the ingestion and storage tradeoffs.
@@ -20,6 +22,8 @@ kubectl rollout status deployment/victoriametrics -n service-launchpad-observabi
 kubectl rollout status deployment/mimir -n service-launchpad-observability
 kubectl rollout status deployment/vmagent -n service-launchpad-observability
 kubectl rollout status deployment/tempo -n service-launchpad-observability
+kubectl rollout status deployment/loki -n service-launchpad-observability
+kubectl rollout status daemonset/promtail -n service-launchpad-observability
 kubectl rollout status deployment/grafana -n service-launchpad-observability
 ```
 
@@ -31,6 +35,7 @@ kubectl port-forward svc/victoriametrics 8428:8428 -n service-launchpad-observab
 kubectl port-forward svc/mimir 9009:9009 -n service-launchpad-observability
 kubectl port-forward svc/vmagent 8429:8429 -n service-launchpad-observability
 kubectl port-forward svc/tempo 3200:3200 -n service-launchpad-observability
+kubectl port-forward svc/loki 3100:3100 -n service-launchpad-observability
 ```
 
 
@@ -39,6 +44,8 @@ kubectl port-forward svc/tempo 3200:3200 -n service-launchpad-observability
 - `vmagent` scrapes `fastapi-service`, `kube-state-metrics`, `VictoriaMetrics`, and `Mimir`, then remote-writes the resulting series to both metric stores
 - `kube-state-metrics` is scraped for replica and autoscaler views
 - trace export is configured through the `fastapi-service` ConfigMap in `k8s/base`
+- `promtail` tails node logs and ships them to `Loki` with pod metadata labels
+- log-to-trace correlation requires applications to include a `trace_id` in their log lines
 - the starter dashboards include:
   - `FastAPI Service Observability` for application latency, errors, SLOs, and replicas
   - `k6 Load Testing` for generator request rate, duration, failure rate, and VUs
