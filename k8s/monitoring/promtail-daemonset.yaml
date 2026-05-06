@@ -24,6 +24,11 @@ spec:
           image: grafana/promtail:2.9.8
           args:
             - -config.file=/etc/promtail/promtail.yaml
+          env:
+            - name: HOSTNAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
           ports:
             - name: http-metrics
               containerPort: 9080
@@ -34,9 +39,6 @@ spec:
               mountPath: /run/promtail
             - name: varlog
               mountPath: /var/log
-              readOnly: true
-            - name: varlibdocker
-              mountPath: /var/lib/docker/containers
               readOnly: true
           resources:
             requests:
@@ -55,7 +57,3 @@ spec:
           hostPath:
             path: /var/log
             type: Directory
-        - name: varlibdocker
-          hostPath:
-            path: /var/lib/docker/containers
-            type: DirectoryOrCreate

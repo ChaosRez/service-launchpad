@@ -44,7 +44,7 @@ kubectl port-forward svc/loki 3100:3100 -n service-launchpad-observability
 - `vmagent` scrapes `fastapi-service`, `kube-state-metrics`, `VictoriaMetrics`, and `Mimir`, then remote-writes the resulting series to both metric stores
 - `kube-state-metrics` is scraped for replica and autoscaler views
 - trace export is configured through the `fastapi-service` ConfigMap in `k8s/base`
-- `promtail` tails node logs and ships them to `Loki` with pod metadata labels
+- `promtail` tails Kubernetes pod logs from `/var/log/pods` and ships them to `Loki` with pod metadata labels
 - log-to-trace correlation requires applications to include a `trace_id` in their log lines
 - the starter dashboards include:
   - `FastAPI Service Observability` for application latency, errors, SLOs, and replicas

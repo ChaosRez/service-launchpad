@@ -7,5 +7,5 @@ metadata:
     app.kubernetes.io/part-of: service-launchpad
 rules:
   - apiGroups: [""]
-    resources: ["pods", "namespaces"]
+    resources: ["pods", "namespaces", "nodes"]
     verbs: ["get", "list", "watch"]

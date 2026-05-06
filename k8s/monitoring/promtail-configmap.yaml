@@ -23,6 +23,8 @@ data:
           - cri: {}
         relabel_configs:
           - source_labels: [__meta_kubernetes_pod_node_name]
+            target_label: __host__
+          - source_labels: [__meta_kubernetes_pod_node_name]
             target_label: node
           - source_labels: [__meta_kubernetes_namespace]
             target_label: namespace
@@ -37,21 +39,3 @@ data:
             separator: /
             target_label: __path__
             replacement: /var/log/pods/*$1/*.log
-      - job_name: kubernetes-pods-docker
-        kubernetes_sd_configs:
-          - role: pod
-        relabel_configs:
-          - source_labels: [__meta_kubernetes_pod_node_name]
-            target_label: node
-          - source_labels: [__meta_kubernetes_namespace]
-            target_label: namespace
-          - source_labels: [__meta_kubernetes_pod_name]
-            target_label: pod
-          - source_labels: [__meta_kubernetes_pod_container_name]
-            target_label: container
-          - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
-            target_label: app
-          - source_labels: [__meta_kubernetes_pod_container_id]
-            regex: docker://(.+)
-            target_label: __path__
-            replacement: /var/lib/docker/containers/$1/$1-json.log
