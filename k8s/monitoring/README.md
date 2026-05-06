@@ -56,6 +56,10 @@ kubectl port-forward svc/loki 3100:3100 -n service-launchpad-observability
 - `k6` is used inside the cluster and sends `k6_*` metrics to `vmagent` via Prometheus remote write at `http://vmagent.service-launchpad-observability.svc.cluster.local:8429/api/v1/write`
 - `vmagent` then replicates those samples to both `VictoriaMetrics` and `Mimir`, which is the Task 11b local-vs-global storage path
 
+## Promtail Readiness Note
+
+In Minikube, a few `kube-system` static control-plane pods such as `etcd`, `kube-apiserver`, `kube-controller-manager`, or `kube-scheduler` to remain `not ready` in the Promtail targets even when the main logging pipeline is working.
+
 ## Footprint Comparison
 
 Use `metrics-server` to compare live CPU and memory footprint in Minikube:
