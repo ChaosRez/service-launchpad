@@ -5,7 +5,7 @@ Service Launchpad is a small internal-platform prototype for registering and ope
 - `Go` control plane for service registration and deployment workflows
 - `FastAPI` workload that simulates a `llama.cpp` chat completion API
 - `Minikube` as the default local Kubernetes path
-- `GKE` path for cloud deployment
+- `GKE` path for cloud deployment, including future `staging` and `production` environments
 - `Terraform` for minimal `GCP` and `IAM` resources
 - `Victoria Metrics`, `Grafana Tempo`, and `Grafana` for observability with defined SLOs
 - `Grafana Mimir` for strategic long-term metrics storage practice
