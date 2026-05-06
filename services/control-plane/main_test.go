@@ -5,6 +5,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -185,5 +186,62 @@ func TestServiceStoreRejectsDuplicates(t *testing.T) {
 
 	if _, err := store.create(def); err == nil {
 		t.Fatalf("expected duplicate create to fail")
+	}
+}
+
+func TestRenderManifestBundleWithoutAutoscaling(t *testing.T) {
+	def := serviceDefinition{
+		Name:     "fastapi-service",
+		Image:    "service-launchpad/fastapi-service:dev",
+		Port:     8000,
+		Replicas: 2,
+	}
+
+	bundle := renderManifestBundle(def, defaultNamespace)
+
+	if bundle.HPA != nil {
+		t.Fatalf("expected no HPA manifest when autoscaling is disabled")
+	}
+	if bundle.Deployment["kind"] != "Deployment" {
+		t.Fatalf("expected deployment manifest")
+	}
+	if bundle.Service["kind"] != "Service" {
+		t.Fatalf("expected service manifest")
+	}
+	if !strings.Contains(bundle.YAML, "kind: Deployment") {
+		t.Fatalf("expected YAML to contain Deployment manifest")
+	}
+	if !strings.Contains(bundle.YAML, "kind: Service") {
+		t.Fatalf("expected YAML to contain Service manifest")
+	}
+}
+
+func TestRenderManifestBundleWithAutoscaling(t *testing.T) {
+	def := serviceDefinition{
+		Name:     "fastapi-service",
+		Image:    "service-launchpad/fastapi-service:dev",
+		Port:     8000,
+		Replicas: 1,
+		Autoscaling: autoscalingConfig{
+			Enabled:              true,
+			MinReplicas:          1,
+			MaxReplicas:          5,
+			TargetCPUUtilization: 60,
+		},
+	}
+
+	bundle := renderManifestBundle(def, defaultNamespace)
+
+	if bundle.HPA == nil {
+		t.Fatalf("expected HPA manifest when autoscaling is enabled")
+	}
+	if bundle.HPA["kind"] != "HorizontalPodAutoscaler" {
+		t.Fatalf("expected HPA kind, got %v", bundle.HPA["kind"])
+	}
+	if !strings.Contains(bundle.YAML, "kind: HorizontalPodAutoscaler") {
+		t.Fatalf("expected YAML to contain HPA manifest")
+	}
+	if !strings.Contains(bundle.YAML, "service-launchpad.io/managed-by") {
+		t.Fatalf("expected YAML to include standard annotations")
 	}
 }

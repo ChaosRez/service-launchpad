@@ -23,6 +23,7 @@ Implemented endpoints:
 - `POST /services`
 - `GET /services`
 - `GET /services/{name}`
+- `GET /services/{name}/manifests`
 
 Current service definition shape:
 
@@ -56,10 +57,6 @@ Run locally:
 ```bash
 go run ./services/control-plane
 ```
-persistent run:
-```bash
-CONTROL_PLANE_STORE_PATH=./tmp/control-plane-services.json go run ./services/control-plane
-```
 
 Optional file-backed storage:
 
@@ -68,3 +65,16 @@ CONTROL_PLANE_STORE_PATH=./tmp/control-plane-services.json go run ./services/con
 ```
 
 When `CONTROL_PLANE_STORE_PATH` is unset, the service stays in-memory only.
+
+Manifest rendering:
+
+- renders a standardized Kubernetes `Deployment`
+- renders a standardized Kubernetes `Service`
+- renders an `HorizontalPodAutoscaler` when autoscaling is enabled
+- includes standard labels, annotations, probes, and resource defaults
+
+Example manifest request:
+
+```bash
+curl http://127.0.0.1:8080/services/fastapi-service/manifests
+```
