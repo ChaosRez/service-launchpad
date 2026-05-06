@@ -43,6 +43,9 @@ spec:
             - name: varlog
               mountPath: /var/log
               readOnly: true
+            - name: varlibdocker
+              mountPath: /var/lib/docker/containers
+              readOnly: true
           resources:
             requests:
               cpu: 50m
@@ -60,3 +63,7 @@ spec:
           hostPath:
             path: /var/log
             type: Directory
+        - name: varlibdocker
+          hostPath:
+            path: /var/lib/docker/containers
+            type: DirectoryOrCreate
