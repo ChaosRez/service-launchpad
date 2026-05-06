@@ -5,11 +5,17 @@ This directory contains `Go` control-plane service for Service Launchpad.
 Current scope:
 
 - accepts service definitions over HTTP
-- keeps them in memory for now
+- keeps them in memory by default
+  - optionally persist service definitions to a JSON file
 - exposes read endpoints for registered services
 
-TODO:
-Validation rules, persistent storage, and Kubernetes manifest rendering.
+Current validation:
+
+- `name` is required and must use lowercase letters, numbers, or hyphens
+- `image` is required
+- `port` must be between `1` and `65535`
+- `replicas` must be at least `1`
+- autoscaling settings are validated when autoscaling is enabled
 
 Implemented endpoints:
 
@@ -50,3 +56,15 @@ Run locally:
 ```bash
 go run ./services/control-plane
 ```
+persistent run:
+```bash
+CONTROL_PLANE_STORE_PATH=./tmp/control-plane-services.json go run ./services/control-plane
+```
+
+Optional file-backed storage:
+
+```bash
+CONTROL_PLANE_STORE_PATH=./tmp/control-plane-services.json go run ./services/control-plane
+```
+
+When `CONTROL_PLANE_STORE_PATH` is unset, the service stays in-memory only.
