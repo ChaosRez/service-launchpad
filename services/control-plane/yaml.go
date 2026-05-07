@@ -1,5 +1,7 @@
 package main
 
+// YAML rendering helpers
+
 import (
 	"fmt"
 	"slices"

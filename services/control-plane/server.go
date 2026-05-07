@@ -1,5 +1,7 @@
 package main
 
+// routing, handlers, JSON/error helpers
+
 import (
 	"encoding/json"
 	"log"

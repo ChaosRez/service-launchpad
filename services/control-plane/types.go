@@ -2,9 +2,6 @@ package main
 
 import "time"
 
-const defaultListenAddr = ":8080"
-const defaultNamespace = "service-launchpad-dev"
-
 type autoscalingConfig struct {
 	Enabled              bool `json:"enabled"`
 	MinReplicas          int  `json:"minReplicas"`

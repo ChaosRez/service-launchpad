@@ -1,5 +1,7 @@
 package main
 
+// Deployment/Service/HPA rendering
+
 func renderManifestBundle(def serviceDefinition, namespace string) manifestBundle {
 	deployment := renderDeploymentManifest(def, namespace)
 	service := renderServiceManifest(def, namespace)

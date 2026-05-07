@@ -1,5 +1,7 @@
 package main
 
+// in-memory + optional JSON persistence
+
 import (
 	"encoding/json"
 	"errors"
