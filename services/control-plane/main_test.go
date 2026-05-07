@@ -3,6 +3,12 @@ package main
 // for validation, duplicate rejection, and JSON persistence reload
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -244,4 +250,102 @@ func TestRenderManifestBundleWithAutoscaling(t *testing.T) {
 	if !strings.Contains(bundle.YAML, "service-launchpad.io/managed-by") {
 		t.Fatalf("expected YAML to include standard annotations")
 	}
+}
+
+// cover successful and failed deploy requests with a fake deployer
+func TestHandleServiceDeploy(t *testing.T) {
+	store, err := newServiceStore("")
+	if err != nil {
+		t.Fatalf("newServiceStore returned error: %v", err)
+	}
+
+	service, err := store.create(serviceDefinition{
+		Name:     "fastapi-service",
+		Image:    "service-launchpad/fastapi-service:dev",
+		Port:     8000,
+		Replicas: 1,
+		Autoscaling: autoscalingConfig{
+			Enabled:              true,
+			MinReplicas:          1,
+			MaxReplicas:          5,
+			TargetCPUUtilization: 60,
+		},
+	})
+	if err != nil {
+		t.Fatalf("create returned error: %v", err)
+	}
+
+	server := newAPIServer(store, defaultNamespace, fakeDeployer{
+		result: applyResult{
+			Command: "kubectl apply -f -",
+			Output:  "deployment.apps/fastapi-service configured",
+		},
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/services/"+service.Name+"/deploy", nil)
+	rec := httptest.NewRecorder()
+
+	server.routes().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", rec.Code)
+	}
+
+	var response map[string]any
+	if err := json.NewDecoder(bytes.NewReader(rec.Body.Bytes())).Decode(&response); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if response["status"] != "applied" {
+		t.Fatalf("expected status=applied, got %v", response["status"])
+	}
+
+	result, ok := response["result"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected result object in response")
+	}
+	if result["command"] != "kubectl apply -f -" {
+		t.Fatalf("unexpected command value: %v", result["command"])
+	}
+}
+
+func TestHandleServiceDeployFailure(t *testing.T) {
+	store, err := newServiceStore("")
+	if err != nil {
+		t.Fatalf("newServiceStore returned error: %v", err)
+	}
+
+	if _, err := store.create(serviceDefinition{
+		Name:     "fastapi-service",
+		Image:    "service-launchpad/fastapi-service:dev",
+		Port:     8000,
+		Replicas: 1,
+	}); err != nil {
+		t.Fatalf("create returned error: %v", err)
+	}
+
+	server := newAPIServer(store, defaultNamespace, fakeDeployer{
+		err: errors.New("kubectl apply failed"),
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/services/fastapi-service/deploy", nil)
+	rec := httptest.NewRecorder()
+
+	server.routes().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadGateway {
+		t.Fatalf("expected status 502, got %d", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "failed to apply manifests") {
+		t.Fatalf("expected deploy failure message, got %s", rec.Body.String())
+	}
+}
+
+type fakeDeployer struct {
+	result applyResult
+	err    error
+}
+
+func (f fakeDeployer) Apply(context.Context, string) (applyResult, error) {
+	return f.result, f.err
 }

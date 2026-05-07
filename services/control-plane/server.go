@@ -13,12 +13,14 @@ import (
 type apiServer struct {
 	store     *serviceStore
 	namespace string
+	deployer  manifestDeployer
 }
 
-func newAPIServer(store *serviceStore, namespace string) *apiServer {
+func newAPIServer(store *serviceStore, namespace string, deployer manifestDeployer) *apiServer {
 	return &apiServer{
 		store:     store,
 		namespace: namespace,
+		deployer:  deployer,
 	}
 }
 
@@ -74,11 +76,6 @@ func (a *apiServer) handleServices(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *apiServer) handleServiceByName(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
-		return
-	}
-
 	path := strings.TrimPrefix(r.URL.Path, "/services/")
 	path = strings.Trim(path, "/")
 	if path == "" {
@@ -99,21 +96,57 @@ func (a *apiServer) handleServiceByName(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if len(parts) == 2 && parts[1] == "manifests" {
+	switch {
+	case len(parts) == 1 && r.Method == http.MethodGet:
+		writeJSON(w, http.StatusOK, map[string]any{
+			"service": service,
+		})
+		return
+	case len(parts) == 2 && parts[1] == "manifests" && r.Method == http.MethodGet:
 		bundle := renderManifestBundle(service, a.namespace)
 		writeJSON(w, http.StatusOK, map[string]any{
 			"service":   service,
 			"manifests": bundle,
 		})
 		return
+	case len(parts) == 2 && parts[1] == "deploy" && r.Method == http.MethodPost:
+		a.handleServiceDeploy(w, r, service)
+		return
+	case len(parts) >= 1:
+		if r.Method != http.MethodGet && !(len(parts) == 2 && parts[1] == "deploy" && r.Method == http.MethodPost) {
+			writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+			return
+		}
 	}
-	if len(parts) > 1 {
-		writeError(w, http.StatusNotFound, "service not found")
+
+	writeError(w, http.StatusNotFound, "service not found")
+}
+
+func (a *apiServer) handleServiceDeploy(w http.ResponseWriter, r *http.Request, service serviceDefinition) {
+	if a.deployer == nil {
+		writeError(w, http.StatusNotImplemented, "deployment is not configured")
+		return
+	}
+
+	bundle := renderManifestBundle(service, a.namespace)
+	result, err := a.deployer.Apply(r.Context(), bundle.YAML)
+	if err != nil {
+		log.Printf("failed to apply manifests for %s: %v", service.Name, err)
+		writeJSON(w, http.StatusBadGateway, map[string]any{
+			"error":     "failed to apply manifests",
+			"service":   service.Name,
+			"namespace": a.namespace,
+			"details":   err.Error(),
+		})
 		return
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{
-		"service": service,
+		"status":    "applied",
+		"service":   service,
+		"namespace": a.namespace,
+		"result":    result,
+		"manifests": bundle,
 	})
 }
 

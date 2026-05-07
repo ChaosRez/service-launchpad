@@ -24,6 +24,7 @@ Implemented endpoints:
 - `GET /services`
 - `GET /services/{name}`
 - `GET /services/{name}/manifests`
+- `POST /services/{name}/deploy`
 
 Current service definition shape:
 
@@ -77,4 +78,16 @@ Example manifest request:
 
 ```bash
 curl http://127.0.0.1:8080/services/fastapi-service/manifests
+```
+
+Cluster apply:
+
+- uses `kubectl apply -f -`
+- targets the current `kubectl` context by default
+- can target an explicit context with `CONTROL_PLANE_KUBECTL_CONTEXT`
+
+Example deploy request:
+
+```bash
+curl -X POST http://127.0.0.1:8080/services/fastapi-service/deploy
 ```
