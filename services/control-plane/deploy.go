@@ -18,7 +18,7 @@ type applyResult struct {
 }
 
 type manifestDeployer interface {
-	Apply(ctx context.Context, manifestsYAML string) (applyResult, error)
+	Apply(ctx context.Context, bundle manifestBundle) (applyResult, error)
 }
 
 type kubectlDeployer struct {
@@ -37,7 +37,26 @@ func newKubectlDeployer(binary, kubectlContext string) manifestDeployer {
 	}
 }
 
-func (d *kubectlDeployer) Apply(ctx context.Context, manifestsYAML string) (applyResult, error) {
+func (d *kubectlDeployer) Apply(ctx context.Context, bundle manifestBundle) (applyResult, error) {
+	// ensure the namespace exists
+	namespaceResult, err := d.runApply(ctx, renderYAMLDocuments([]map[string]any{bundle.NamespaceManifest}))
+	if err != nil {
+		return namespaceResult, err
+	}
+
+	// then apply the rest of the resources (bundle.YAML)
+	resourceResult, err := d.runApply(ctx, bundle.YAML)
+	if err != nil {
+		return resourceResult, err
+	}
+
+	return applyResult{
+		Command: resourceResult.Command,
+		Output:  strings.TrimSpace(namespaceResult.Output + "\n" + resourceResult.Output),
+	}, nil
+}
+
+func (d *kubectlDeployer) runApply(ctx context.Context, manifestsYAML string) (applyResult, error) {
 	args := make([]string, 0, 5)
 	if d.context != "" {
 		args = append(args, "--context", d.context)

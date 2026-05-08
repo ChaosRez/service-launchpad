@@ -19,9 +19,10 @@ type serviceDefinition struct {
 }
 
 type manifestBundle struct {
-	Namespace  string         `json:"namespace"`
-	Deployment map[string]any `json:"deployment"`
-	Service    map[string]any `json:"service"`
-	HPA        map[string]any `json:"hpa,omitempty"`
-	YAML       string         `json:"yaml"`
+	Namespace         string         `json:"namespace"`
+	NamespaceManifest map[string]any `json:"namespaceManifest"`
+	Deployment        map[string]any `json:"deployment"`
+	Service           map[string]any `json:"service"`
+	HPA               map[string]any `json:"hpa,omitempty"`
+	YAML              string         `json:"yaml"`
 }

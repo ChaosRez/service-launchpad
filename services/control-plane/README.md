@@ -82,6 +82,7 @@ curl http://127.0.0.1:8080/services/fastapi-service/manifests
 
 Cluster apply:
 
+- creates the target namespace first when it does not exist yet
 - uses `kubectl apply -f -`
 - targets the current `kubectl` context by default
 - can target an explicit context with `CONTROL_PLANE_KUBECTL_CONTEXT`

@@ -208,6 +208,9 @@ func TestRenderManifestBundleWithoutAutoscaling(t *testing.T) {
 	if bundle.HPA != nil {
 		t.Fatalf("expected no HPA manifest when autoscaling is disabled")
 	}
+	if bundle.NamespaceManifest["kind"] != "Namespace" {
+		t.Fatalf("expected namespace manifest")
+	}
 	if bundle.Deployment["kind"] != "Deployment" {
 		t.Fatalf("expected deployment manifest")
 	}
@@ -219,6 +222,9 @@ func TestRenderManifestBundleWithoutAutoscaling(t *testing.T) {
 	}
 	if !strings.Contains(bundle.YAML, "kind: Service") {
 		t.Fatalf("expected YAML to contain Service manifest")
+	}
+	if strings.Contains(bundle.YAML, "kind: Namespace") {
+		t.Fatalf("expected resource YAML to exclude Namespace manifest")
 	}
 }
 
@@ -342,10 +348,12 @@ func TestHandleServiceDeployFailure(t *testing.T) {
 }
 
 type fakeDeployer struct {
-	result applyResult
-	err    error
+	result     applyResult
+	err        error
+	lastBundle manifestBundle
 }
 
-func (f fakeDeployer) Apply(context.Context, string) (applyResult, error) {
+func (f fakeDeployer) Apply(_ context.Context, bundle manifestBundle) (applyResult, error) {
+	f.lastBundle = bundle
 	return f.result, f.err
 }

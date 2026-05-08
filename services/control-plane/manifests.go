@@ -3,22 +3,38 @@ package main
 // Deployment/Service/HPA rendering
 
 func renderManifestBundle(def serviceDefinition, namespace string) manifestBundle {
+	namespaceManifest := renderNamespaceManifest(namespace)
 	deployment := renderDeploymentManifest(def, namespace)
 	service := renderServiceManifest(def, namespace)
 
+	resourceManifests := []map[string]any{deployment, service}
 	var hpa map[string]any
-	manifests := []map[string]any{deployment, service}
 	if def.Autoscaling.Enabled {
 		hpa = renderHPAManifest(def, namespace)
-		manifests = append(manifests, hpa)
+		resourceManifests = append(resourceManifests, hpa)
 	}
 
 	return manifestBundle{
-		Namespace:  namespace,
-		Deployment: deployment,
-		Service:    service,
-		HPA:        hpa,
-		YAML:       renderYAMLDocuments(manifests),
+		Namespace:         namespace,
+		NamespaceManifest: namespaceManifest,
+		Deployment:        deployment,
+		Service:           service,
+		HPA:               hpa,
+		YAML:              renderYAMLDocuments(resourceManifests),
+	}
+}
+
+func renderNamespaceManifest(namespace string) map[string]any {
+	return map[string]any{
+		"apiVersion": "v1",
+		"kind":       "Namespace",
+		"metadata": map[string]any{
+			"name": namespace,
+			"labels": map[string]any{
+				"app.kubernetes.io/part-of": "service-launchpad",
+			},
+			"annotations": standardAnnotations(),
+		},
 	}
 }
 

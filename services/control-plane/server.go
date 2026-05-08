@@ -129,7 +129,7 @@ func (a *apiServer) handleServiceDeploy(w http.ResponseWriter, r *http.Request, 
 	}
 
 	bundle := renderManifestBundle(service, a.namespace)
-	result, err := a.deployer.Apply(r.Context(), bundle.YAML)
+	result, err := a.deployer.Apply(r.Context(), bundle)
 	if err != nil {
 		log.Printf("failed to apply manifests for %s: %v", service.Name, err)
 		writeJSON(w, http.StatusBadGateway, map[string]any{
