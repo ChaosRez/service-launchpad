@@ -211,6 +211,9 @@ func TestRenderManifestBundleWithoutAutoscaling(t *testing.T) {
 	if bundle.NamespaceManifest["kind"] != "Namespace" {
 		t.Fatalf("expected namespace manifest")
 	}
+	if bundle.ConfigMap["kind"] != "ConfigMap" {
+		t.Fatalf("expected configmap manifest for fastapi-service")
+	}
 	if bundle.Deployment["kind"] != "Deployment" {
 		t.Fatalf("expected deployment manifest")
 	}
@@ -219,6 +222,9 @@ func TestRenderManifestBundleWithoutAutoscaling(t *testing.T) {
 	}
 	if !strings.Contains(bundle.YAML, "kind: Deployment") {
 		t.Fatalf("expected YAML to contain Deployment manifest")
+	}
+	if !strings.Contains(bundle.YAML, "kind: ConfigMap") {
+		t.Fatalf("expected YAML to contain ConfigMap manifest")
 	}
 	if !strings.Contains(bundle.YAML, "kind: Service") {
 		t.Fatalf("expected YAML to contain Service manifest")
@@ -253,8 +259,40 @@ func TestRenderManifestBundleWithAutoscaling(t *testing.T) {
 	if !strings.Contains(bundle.YAML, "kind: HorizontalPodAutoscaler") {
 		t.Fatalf("expected YAML to contain HPA manifest")
 	}
-	if !strings.Contains(bundle.YAML, "service-launchpad.io/managed-by") {
-		t.Fatalf("expected YAML to include standard annotations")
+	metadata, ok := bundle.Deployment["metadata"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected deployment metadata")
+	}
+	labels, ok := metadata["labels"].(map[string]any)
+	if !ok || labels["app.kubernetes.io/component"] != "inference-simulator" {
+		t.Fatalf("expected deployment to use the base component label")
+	}
+	configMapMetadata, ok := bundle.ConfigMap["metadata"].(map[string]any)
+	if !ok || configMapMetadata["name"] != "fastapi-service-config" {
+		t.Fatalf("expected fastapi-service config map metadata")
+	}
+	spec, ok := bundle.Deployment["spec"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected deployment spec")
+	}
+	template, ok := spec["template"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected deployment template")
+	}
+	templateSpec, ok := template["spec"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected deployment template spec")
+	}
+	containers, ok := templateSpec["containers"].([]any)
+	if !ok || len(containers) == 0 {
+		t.Fatalf("expected deployment containers")
+	}
+	container, ok := containers[0].(map[string]any)
+	if !ok {
+		t.Fatalf("expected first container to be an object")
+	}
+	if _, ok := container["envFrom"].([]any); !ok {
+		t.Fatalf("expected deployment to reference the config map via envFrom")
 	}
 }
 

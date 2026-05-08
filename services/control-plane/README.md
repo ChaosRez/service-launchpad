@@ -69,10 +69,12 @@ When `CONTROL_PLANE_STORE_PATH` is unset, the service stays in-memory only.
 
 Manifest rendering:
 
+- currently mirrors the sample inference-simulator shape from [`k8s/base`](k8s/base)
+- renders a standardized Kubernetes `ConfigMap` for `fastapi-service`
 - renders a standardized Kubernetes `Deployment`
 - renders a standardized Kubernetes `Service`
 - renders an `HorizontalPodAutoscaler` when autoscaling is enabled
-- includes standard labels, annotations, probes, and resource defaults
+- includes the same labels, probes, resource defaults, and `envFrom` wiring used by the base manifests (`k8s/base`)
 
 Example manifest request:
 
