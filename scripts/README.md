@@ -6,7 +6,28 @@ This directory will hold local helper scripts for Minikube bootstrapping, deploy
 
 - `bootstrap-minikube.sh`: starts a local Minikube cluster, updates the `kubectl` context, enables `metrics-server`, and can print the Docker environment command for local image builds
 - `load-test-fastapi-service.sh`: runs an in-cluster `k6` Job against `fastapi-service` and remote-writes `k6_*` metrics to `vmagent`, which fans them out to both `VictoriaMetrics` and `Mimir`
-- `smoke-test-fastapi-service.sh`: boots Minikube, builds the service image, deploys the manifests, port-forwards the service, and validates the main endpoints
+- `smoke-test-fastapi-service.sh`: boots Minikube, builds the service image into Minikube, starts the control plane, registers `fastapi-service`, deploys it through the control-plane API, and validates the main endpoints
+
+## Control Plane Smoke Test
+
+The preferred deployment smoke test now exercises the control plane instead of applying [`k8s/base`](k8s/base) directly.
+
+```bash
+./scripts/smoke-test-fastapi-service.sh
+```
+
+The script:
+
+- starts `Minikube`
+- points Docker at Minikube's daemon
+- builds `service-launchpad/fastapi-service:dev`
+- starts the control plane locally with a temporary JSON store
+- registers `fastapi-service`
+- validates the rendered manifests
+- deploys through `POST /services/fastapi-service/deploy`
+- waits for rollout and verifies the service endpoints
+
+Current prerequisite: the referenced image must already be available to the cluster. The smoke test handles that automatically for local Minikube by building the image into Minikube's Docker daemon first.
 
 ## k6 Load Testing
 

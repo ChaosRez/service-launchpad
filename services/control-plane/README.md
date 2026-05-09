@@ -89,6 +89,21 @@ Cluster apply:
 - targets the current `kubectl` context by default
 - can target an explicit context with `CONTROL_PLANE_KUBECTL_CONTEXT`
 
+Current prerequisite:
+
+- the referenced container image must already be available to the target cluster
+- for local `Minikube`, that usually means:
+
+```bash
+eval "$(minikube -p service-launchpad docker-env)"
+docker build -t service-launchpad/fastapi-service:dev services/fastapi-service
+```
+
+Project direction:
+
+- keep image availability as a documented prerequisite for the current local-control-plane phase
+- later add a dev-friendly workflow around image loading or chart values, without turning the control plane itself into a generic image builder
+
 Example deploy request:
 
 ```bash

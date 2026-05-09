@@ -6,11 +6,21 @@ PROFILE="${MINIKUBE_PROFILE:-service-launchpad}"
 NAMESPACE="${K8S_NAMESPACE:-service-launchpad-dev}"
 IMAGE="${FASTAPI_SERVICE_IMAGE:-service-launchpad/fastapi-service:dev}"
 LOCAL_PORT="${FASTAPI_SERVICE_LOCAL_PORT:-8000}"
+CONTROL_PLANE_PORT="${CONTROL_PLANE_PORT:-8080}"
+CONTROL_PLANE_ADDR="${CONTROL_PLANE_LISTEN_ADDR:-127.0.0.1:${CONTROL_PLANE_PORT}}"
+CONTROL_PLANE_URL="http://${CONTROL_PLANE_ADDR}"
 SERVICE_NAME="fastapi-service"
+STORE_PATH="${CONTROL_PLANE_STORE_PATH:-$(mktemp /tmp/control-plane-store.XXXXXX.json)}"
+CONTROL_PLANE_LOG="${CONTROL_PLANE_LOG:-/tmp/control-plane-smoke-test.log}"
+PORT_FORWARD_LOG="${PORT_FORWARD_LOG:-/tmp/fastapi-service-port-forward.log}"
 
 cleanup() {
   if [[ -n "${PORT_FORWARD_PID:-}" ]]; then
     kill "${PORT_FORWARD_PID}" >/dev/null 2>&1 || true
+  fi
+  if [[ -n "${CONTROL_PLANE_PID:-}" ]]; then
+    kill "${CONTROL_PLANE_PID}" >/dev/null 2>&1 || true
+    wait "${CONTROL_PLANE_PID}" >/dev/null 2>&1 || true
   fi
 }
 
@@ -23,7 +33,7 @@ require_command() {
 
 wait_for_http() {
   local url="$1"
-  local attempts=20
+  local attempts="${2:-30}"
 
   for _ in $(seq 1 "${attempts}"); do
     if curl -fsS "${url}" >/dev/null 2>&1; then
@@ -53,6 +63,7 @@ require_command minikube
 require_command kubectl
 require_command docker
 require_command curl
+require_command go
 
 echo "==> Starting Minikube"
 ./scripts/bootstrap-minikube.sh --docker-env
@@ -63,14 +74,57 @@ eval "$(minikube -p "${PROFILE}" docker-env)"
 echo "==> Building fastapi-service image"
 docker build -t "${IMAGE}" services/fastapi-service
 
-echo "==> Applying Kubernetes manifests"
-kubectl apply -k k8s/base
+echo "==> Starting control plane on ${CONTROL_PLANE_ADDR}"
+CONTROL_PLANE_LISTEN_ADDR="${CONTROL_PLANE_ADDR}" \
+CONTROL_PLANE_STORE_PATH="${STORE_PATH}" \
+CONTROL_PLANE_KUBECTL_CONTEXT="${PROFILE}" \
+go run ./services/control-plane >"${CONTROL_PLANE_LOG}" 2>&1 &
+CONTROL_PLANE_PID=$!
 
-echo "==> Waiting for deployment rollout"
+wait_for_http "${CONTROL_PLANE_URL}/health" 45
+
+echo "==> Registering service definition"
+register_response="$(
+  curl -fsS -X POST "${CONTROL_PLANE_URL}/services" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "name": "fastapi-service",
+      "image": "'"${IMAGE}"'",
+      "port": 8000,
+      "replicas": 1,
+      "autoscaling": {
+        "enabled": true,
+        "minReplicas": 1,
+        "maxReplicas": 5,
+        "targetCpuUtilization": 60
+      }
+    }'
+)"
+assert_contains "${register_response}" "\"name\":\"fastapi-service\""
+
+echo "==> Validating rendered manifests"
+manifest_response="$(curl -fsS "${CONTROL_PLANE_URL}/services/${SERVICE_NAME}/manifests")"
+assert_contains "${manifest_response}" "\"namespace\":\"${NAMESPACE}\""
+assert_contains "${manifest_response}" "\"configMap\""
+assert_contains "${manifest_response}" "\"deployment\""
+assert_contains "${manifest_response}" "\"service\""
+assert_contains "${manifest_response}" "\"hpa\""
+
+echo "==> Deploying through the control plane"
+deploy_response="$(curl -fsS -X POST "${CONTROL_PLANE_URL}/services/${SERVICE_NAME}/deploy")"
+assert_contains "${deploy_response}" "\"status\":\"applied\""
+
+echo "==> Waiting for Kubernetes rollout"
 kubectl rollout status deployment/"${SERVICE_NAME}" -n "${NAMESPACE}" --timeout=180s
 
+echo "==> Checking namespace, deployment, service, and HPA"
+kubectl get namespace "${NAMESPACE}" >/dev/null
+kubectl get deployment "${SERVICE_NAME}" -n "${NAMESPACE}" >/dev/null
+kubectl get service "${SERVICE_NAME}" -n "${NAMESPACE}" >/dev/null
+kubectl get hpa "${SERVICE_NAME}" -n "${NAMESPACE}" >/dev/null
+
 echo "==> Starting port-forward on localhost:${LOCAL_PORT}"
-kubectl port-forward svc/"${SERVICE_NAME}" "${LOCAL_PORT}:8000" -n "${NAMESPACE}" >/tmp/fastapi-service-port-forward.log 2>&1 &
+kubectl port-forward svc/"${SERVICE_NAME}" "${LOCAL_PORT}:8000" -n "${NAMESPACE}" >"${PORT_FORWARD_LOG}" 2>&1 &
 PORT_FORWARD_PID=$!
 
 wait_for_http "http://127.0.0.1:${LOCAL_PORT}/health"
@@ -101,4 +155,4 @@ metrics_response="$(curl -fsS "http://127.0.0.1:${LOCAL_PORT}/metrics")"
 assert_contains "${metrics_response}" "fastapi_service_requests_total"
 assert_contains "${metrics_response}" "fastapi_service_request_duration_seconds"
 
-echo "==> Smoke test passed"
+echo "==> Control-plane smoke test passed"
