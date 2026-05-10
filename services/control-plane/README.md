@@ -61,6 +61,8 @@ Run locally:
 go run ./services/control-plane
 ```
 
+For the Minikube monitoring stack to scrape the local control plane, keep it reachable from the Minikube node. The default `CONTROL_PLANE_LISTEN_ADDR=:8080` listens on all interfaces, which works with the `host.minikube.internal:8080` scrape target used by `vmagent`.
+
 Optional file-backed storage:
 
 ```bash
@@ -125,8 +127,8 @@ Metrics:
 - `service_launchpad_control_plane_deployment_duration_seconds`
 - `service_launchpad_control_plane_managed_services`
 
-The local monitoring stack scrapes the expected in-cluster control-plane service at:
+The local monitoring stack keeps the control plane outside Kubernetes for now and scrapes it from in-cluster `vmagent` through Minikube's host alias:
 
 ```text
-control-plane.service-launchpad-dev.svc.cluster.local:8080
+host.minikube.internal:8080
 ```

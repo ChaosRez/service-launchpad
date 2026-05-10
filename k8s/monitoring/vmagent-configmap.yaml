@@ -37,4 +37,4 @@ data:
         metrics_path: /metrics
         static_configs:
           - targets:
-              - control-plane.service-launchpad-dev.svc.cluster.local:8080
+              - host.minikube.internal:8080
