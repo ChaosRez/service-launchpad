@@ -49,6 +49,7 @@ kubectl port-forward svc/loki 3100:3100 -n service-launchpad-observability
 - log-to-trace correlation requires applications to include a `trace_id` in their log lines
 - the starter dashboards include:
   - `FastAPI Service Observability` for application latency, errors, SLOs, and replicas
+  - `Control Plane Observability` for scrape health, managed service count, registrations, deployments, and deployment duration
   - `k6 Load Testing` for generator request rate, duration, failure rate, and VUs
   - `Metrics Storage Comparison` for side-by-side local vs long-term store queries
 - Grafana provisions the dashboard into the `Service Launchpad` folder on startup

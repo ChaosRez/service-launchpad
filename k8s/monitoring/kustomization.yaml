@@ -29,6 +29,7 @@ resources:
   - grafana-datasources-configmap.yaml
   - grafana-dashboard-providers-configmap.yaml
   - grafana-fastapi-dashboard-configmap.yaml
+  - grafana-control-plane-dashboard-configmap.yaml
   - grafana-k6-dashboard-configmap.yaml
   - grafana-storage-comparison-dashboard-configmap.yaml
   - grafana-deployment.yaml
