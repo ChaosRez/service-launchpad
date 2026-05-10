@@ -76,6 +76,13 @@ func (s *serviceStore) get(name string) (serviceDefinition, bool) {
 	return service, ok
 }
 
+func (s *serviceStore) count() int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return len(s.services)
+}
+
 func (s *serviceStore) load() error {
 	if s.storePath == "" {
 		return nil

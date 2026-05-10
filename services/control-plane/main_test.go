@@ -385,6 +385,103 @@ func TestHandleServiceDeployFailure(t *testing.T) {
 	}
 }
 
+func TestMetricsEndpointTracksRegistrationsAndManagedServices(t *testing.T) {
+	store, err := newServiceStore("")
+	if err != nil {
+		t.Fatalf("newServiceStore returned error: %v", err)
+	}
+
+	server := newAPIServer(store, defaultNamespace, nil)
+	handler := server.routes()
+
+	createReq := httptest.NewRequest(http.MethodPost, "/services", strings.NewReader(`{
+		"name": "fastapi-service",
+		"image": "service-launchpad/fastapi-service:dev",
+		"port": 8000,
+		"replicas": 1
+	}`))
+	createRec := httptest.NewRecorder()
+	handler.ServeHTTP(createRec, createReq)
+	if createRec.Code != http.StatusCreated {
+		t.Fatalf("expected status 201, got %d", createRec.Code)
+	}
+
+	invalidReq := httptest.NewRequest(http.MethodPost, "/services", strings.NewReader(`{"name": "Bad_Name"}`))
+	invalidRec := httptest.NewRecorder()
+	handler.ServeHTTP(invalidRec, invalidReq)
+	if invalidRec.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d", invalidRec.Code)
+	}
+
+	metricsReq := httptest.NewRequest(http.MethodGet, "/metrics", nil)
+	metricsRec := httptest.NewRecorder()
+	handler.ServeHTTP(metricsRec, metricsReq)
+
+	if metricsRec.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", metricsRec.Code)
+	}
+	if contentType := metricsRec.Header().Get("Content-Type"); !strings.Contains(contentType, "text/plain") {
+		t.Fatalf("expected text/plain metrics content type, got %q", contentType)
+	}
+
+	body := metricsRec.Body.String()
+	expectedLines := []string{
+		`service_launchpad_control_plane_service_registrations_total{result="success"} 1`,
+		`service_launchpad_control_plane_service_registrations_total{result="failure"} 1`,
+		`service_launchpad_control_plane_managed_services 1`,
+	}
+	for _, line := range expectedLines {
+		if !strings.Contains(body, line) {
+			t.Fatalf("expected metrics body to contain %q, got:\n%s", line, body)
+		}
+	}
+}
+
+func TestMetricsEndpointTracksDeploymentResultsAndDuration(t *testing.T) {
+	store, err := newServiceStore("")
+	if err != nil {
+		t.Fatalf("newServiceStore returned error: %v", err)
+	}
+
+	service, err := store.create(serviceDefinition{
+		Name:     "fastapi-service",
+		Image:    "service-launchpad/fastapi-service:dev",
+		Port:     8000,
+		Replicas: 1,
+	})
+	if err != nil {
+		t.Fatalf("create returned error: %v", err)
+	}
+
+	server := newAPIServer(store, defaultNamespace, fakeDeployer{
+		result: applyResult{Command: "kubectl apply -f -"},
+	})
+	handler := server.routes()
+
+	deployReq := httptest.NewRequest(http.MethodPost, "/services/"+service.Name+"/deploy", nil)
+	deployRec := httptest.NewRecorder()
+	handler.ServeHTTP(deployRec, deployReq)
+	if deployRec.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", deployRec.Code)
+	}
+
+	metricsReq := httptest.NewRequest(http.MethodGet, "/metrics", nil)
+	metricsRec := httptest.NewRecorder()
+	handler.ServeHTTP(metricsRec, metricsReq)
+
+	body := metricsRec.Body.String()
+	expectedLines := []string{
+		`service_launchpad_control_plane_deployments_total{result="success"} 1`,
+		`service_launchpad_control_plane_deployment_duration_seconds_bucket{result="success",le="+Inf"} 1`,
+		`service_launchpad_control_plane_deployment_duration_seconds_count{result="success"} 1`,
+	}
+	for _, line := range expectedLines {
+		if !strings.Contains(body, line) {
+			t.Fatalf("expected metrics body to contain %q, got:\n%s", line, body)
+		}
+	}
+}
+
 type fakeDeployer struct {
 	result     applyResult
 	err        error

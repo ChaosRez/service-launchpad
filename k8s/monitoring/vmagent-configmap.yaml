@@ -33,3 +33,8 @@ data:
         static_configs:
           - targets:
               - fastapi-service.service-launchpad-dev.svc.cluster.local:8000
+      - job_name: control-plane
+        metrics_path: /metrics
+        static_configs:
+          - targets:
+              - control-plane.service-launchpad-dev.svc.cluster.local:8080

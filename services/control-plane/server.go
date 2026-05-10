@@ -14,6 +14,7 @@ type apiServer struct {
 	store     *serviceStore
 	namespace string
 	deployer  manifestDeployer
+	metrics   *controlPlaneMetrics
 }
 
 func newAPIServer(store *serviceStore, namespace string, deployer manifestDeployer) *apiServer {
@@ -21,12 +22,14 @@ func newAPIServer(store *serviceStore, namespace string, deployer manifestDeploy
 		store:     store,
 		namespace: namespace,
 		deployer:  deployer,
+		metrics:   newControlPlaneMetrics(store),
 	}
 }
 
 func (a *apiServer) routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", a.handleHealth)
+	mux.HandleFunc("/metrics", a.metrics.handleMetrics)
 	mux.HandleFunc("/services", a.handleServices)
 	mux.HandleFunc("/services/", a.handleServiceByName)
 	return loggingMiddleware(mux)
@@ -47,17 +50,20 @@ func (a *apiServer) handleServices(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPost:
 		var def serviceDefinition
 		if err := json.NewDecoder(r.Body).Decode(&def); err != nil {
+			a.metrics.recordServiceRegistration("failure")
 			writeError(w, http.StatusBadRequest, "invalid JSON request body")
 			return
 		}
 
 		if err := validateServiceDefinition(def); err != nil {
+			a.metrics.recordServiceRegistration("failure")
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
 
 		created, err := a.store.create(def)
 		if err != nil {
+			a.metrics.recordServiceRegistration("failure")
 			if strings.Contains(err.Error(), "already exists") {
 				writeError(w, http.StatusConflict, err.Error()) // 409 Conflict instead of silent overwrite
 				return
@@ -67,6 +73,7 @@ func (a *apiServer) handleServices(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		a.metrics.recordServiceRegistration("success")
 		writeJSON(w, http.StatusCreated, map[string]any{
 			"service": created,
 		})
@@ -124,13 +131,16 @@ func (a *apiServer) handleServiceByName(w http.ResponseWriter, r *http.Request) 
 
 func (a *apiServer) handleServiceDeploy(w http.ResponseWriter, r *http.Request, service serviceDefinition) {
 	if a.deployer == nil {
+		a.metrics.recordDeployment("failure", 0)
 		writeError(w, http.StatusNotImplemented, "deployment is not configured")
 		return
 	}
 
 	bundle := renderManifestBundle(service, a.namespace)
+	start := time.Now()
 	result, err := a.deployer.Apply(r.Context(), bundle)
 	if err != nil {
+		a.metrics.recordDeployment("failure", time.Since(start))
 		log.Printf("failed to apply manifests for %s: %v", service.Name, err)
 		writeJSON(w, http.StatusBadGateway, map[string]any{
 			"error":     "failed to apply manifests",
@@ -141,6 +151,7 @@ func (a *apiServer) handleServiceDeploy(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
+	a.metrics.recordDeployment("success", time.Since(start))
 	writeJSON(w, http.StatusOK, map[string]any{
 		"status":    "applied",
 		"service":   service,

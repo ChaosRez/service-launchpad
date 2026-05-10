@@ -20,6 +20,7 @@ Current validation:
 Implemented endpoints:
 
 - `GET /health`
+- `GET /metrics`
 - `POST /services`
 - `GET /services`
 - `GET /services/{name}`
@@ -108,4 +109,18 @@ Example deploy request:
 
 ```bash
 curl -X POST http://127.0.0.1:8080/services/fastapi-service/deploy
+```
+
+Metrics:
+
+- exposed from `GET /metrics` in Prometheus text format for `vmagent` / `VictoriaMetrics`
+- `service_launchpad_control_plane_service_registrations_total{result="success|failure"}`
+- `service_launchpad_control_plane_deployments_total{result="success|failure"}`
+- `service_launchpad_control_plane_deployment_duration_seconds`
+- `service_launchpad_control_plane_managed_services`
+
+The local monitoring stack scrapes the expected in-cluster control-plane service at:
+
+```text
+control-plane.service-launchpad-dev.svc.cluster.local:8080
 ```
