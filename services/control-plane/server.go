@@ -29,6 +29,7 @@ func newAPIServer(store *serviceStore, namespace string, deployer manifestDeploy
 func (a *apiServer) routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", a.handleHealth)
+	mux.HandleFunc("/ready", a.handleReady)
 	mux.HandleFunc("/metrics", a.metrics.handleMetrics)
 	mux.HandleFunc("/services", a.handleServices)
 	mux.HandleFunc("/services/", a.handleServiceByName)
@@ -38,6 +39,17 @@ func (a *apiServer) routes() http.Handler {
 func (a *apiServer) handleHealth(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{
 		"status": "ok",
+	})
+}
+
+func (a *apiServer) handleReady(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]any{
+		"status":             "ready",
+		"namespace":          a.namespace,
+		"managedServices":    a.store.count(),
+		"deploymentEnabled":  a.deployer != nil,
+		"metricsEnabled":     a.metrics != nil,
+		"persistenceEnabled": a.store.storePath != "",
 	})
 }
 

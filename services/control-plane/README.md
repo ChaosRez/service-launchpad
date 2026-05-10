@@ -20,6 +20,7 @@ Current validation:
 Implemented endpoints:
 
 - `GET /health`
+- `GET /ready`
 - `GET /metrics`
 - `POST /services`
 - `GET /services`
@@ -110,6 +111,11 @@ Example deploy request:
 ```bash
 curl -X POST http://127.0.0.1:8080/services/fastapi-service/deploy
 ```
+
+Health and readiness:
+
+- `GET /health` returns a minimal liveness response
+- `GET /ready` returns readiness/status details including target namespace, managed service count, deployment availability, metrics availability, and whether file persistence is enabled
 
 Metrics:
 

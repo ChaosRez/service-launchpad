@@ -385,6 +385,77 @@ func TestHandleServiceDeployFailure(t *testing.T) {
 	}
 }
 
+func TestHealthReadyAndMetricsEndpoints(t *testing.T) {
+	store, err := newServiceStore("")
+	if err != nil {
+		t.Fatalf("newServiceStore returned error: %v", err)
+	}
+
+	if _, err := store.create(serviceDefinition{
+		Name:     "fastapi-service",
+		Image:    "service-launchpad/fastapi-service:dev",
+		Port:     8000,
+		Replicas: 1,
+	}); err != nil {
+		t.Fatalf("create returned error: %v", err)
+	}
+
+	server := newAPIServer(store, defaultNamespace, fakeDeployer{})
+	handler := server.routes()
+
+	tests := []struct {
+		name       string
+		path       string
+		wantStatus int
+		wantBody   []string
+	}{
+		{
+			name:       "health",
+			path:       "/health",
+			wantStatus: http.StatusOK,
+			wantBody:   []string{`"status":"ok"`},
+		},
+		{
+			name:       "ready",
+			path:       "/ready",
+			wantStatus: http.StatusOK,
+			wantBody: []string{
+				`"status":"ready"`,
+				`"namespace":"service-launchpad-dev"`,
+				`"managedServices":1`,
+				`"deploymentEnabled":true`,
+				`"metricsEnabled":true`,
+			},
+		},
+		{
+			name:       "metrics",
+			path:       "/metrics",
+			wantStatus: http.StatusOK,
+			wantBody:   []string{"# HELP service_launchpad_control_plane_managed_services"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tc.path, nil)
+			rec := httptest.NewRecorder()
+
+			handler.ServeHTTP(rec, req)
+
+			if rec.Code != tc.wantStatus {
+				t.Fatalf("expected status %d, got %d", tc.wantStatus, rec.Code)
+			}
+
+			body := rec.Body.String()
+			for _, want := range tc.wantBody {
+				if !strings.Contains(body, want) {
+					t.Fatalf("expected response body to contain %q, got:\n%s", want, body)
+				}
+			}
+		})
+	}
+}
+
 func TestMetricsEndpointTracksRegistrationsAndManagedServices(t *testing.T) {
 	store, err := newServiceStore("")
 	if err != nil {
