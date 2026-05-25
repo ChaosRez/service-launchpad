@@ -1,0 +1,8 @@
+project_id  = "your-gcp-project-id"
+region      = "europe-west10"
+zone        = "europe-west10-a"
+name_prefix = "service-launchpad"
+
+labels = {
+  owner = "platform"
+}
