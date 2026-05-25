@@ -6,3 +6,7 @@ name_prefix = "service-launchpad"
 labels = {
   owner = "platform"
 }
+
+# Optional
+# artifact_bucket_name          = "globally-unique-bucket-name"
+# artifact_bucket_force_destroy = true
