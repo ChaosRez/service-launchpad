@@ -88,12 +88,47 @@ curl http://127.0.0.1:8080/services/fastapi-service/manifests
 
 Cluster apply:
 
-- creates the target namespace first when it does not exist yet
-- uses `kubectl apply -f -`
-- targets the current `kubectl` context by default
-- can target an explicit context with `CONTROL_PLANE_KUBECTL_CONTEXT`
+- creates or updates the target namespace first when it does not exist yet
+- uses the shared `client-go` deployer by default
+- can use local kubeconfig for Minikube
+- can use explicit API endpoint, CA, and bearer-token settings for external runtimes
+- can fall back to `kubectl apply -f -` for local debug use
 
-The `kubectl` deployer is the initial local implementation path. Once the `client-go` deployer exists, `kubectl` should remain only as a local fallback / debug path. The shared `client-go` deployer should be tested against Minikube before Cloud Run uses it to manage the production GKE cluster with a dedicated Google service account.
+The `client-go` deployer is the shared implementation path for Minikube and the production Cloud Run to GKE model. The local `kubectl` deployer remains available as a fallback / debug option only.
+
+Deployer modes:
+
+```bash
+# default
+CONTROL_PLANE_DEPLOYER_MODE=client-go
+
+# local fallback / debug
+CONTROL_PLANE_DEPLOYER_MODE=kubectl
+
+# API-only mode, disables deploy calls
+CONTROL_PLANE_DEPLOYER_MODE=disabled
+```
+
+Local Minikube through kubeconfig:
+
+```bash
+CONTROL_PLANE_DEPLOYER_MODE=client-go \
+CONTROL_PLANE_KUBECONFIG="$HOME/.kube/config" \
+CONTROL_PLANE_KUBE_CONTEXT=service-launchpad \
+go run ./services/control-plane
+```
+
+External cluster settings:
+
+```bash
+CONTROL_PLANE_DEPLOYER_MODE=client-go
+CONTROL_PLANE_KUBE_API_SERVER=https://<cluster-api-endpoint>
+CONTROL_PLANE_KUBE_CA_FILE=/var/run/service-launchpad/cluster-ca.crt
+CONTROL_PLANE_KUBE_BEARER_TOKEN_FILE=/var/run/service-launchpad/token
+CONTROL_PLANE_TARGET_NAMESPACE=service-launchpad-prod
+```
+
+The external settings are the shape intended for Cloud Run once the production GKE access model is configured. The Cloud Run service account authenticates the runtime; Kubernetes RBAC still controls which resources can be created or updated.
 
 Current prerequisite:
 

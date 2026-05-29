@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"net/http"
-	"os"
 	"time"
 )
 
@@ -11,34 +10,32 @@ const defaultListenAddr = ":8080"
 const defaultNamespace = "service-launchpad-dev"
 
 func main() {
-	listenAddr := os.Getenv("CONTROL_PLANE_LISTEN_ADDR")
-	if listenAddr == "" {
-		listenAddr = defaultListenAddr
-	}
+	cfg := loadControlPlaneConfig()
 
-	storePath := os.Getenv("CONTROL_PLANE_STORE_PATH") // otherwise, in-memory only
-	kubectlBinary := os.Getenv("CONTROL_PLANE_KUBECTL_BIN")
-	kubectlContext := os.Getenv("CONTROL_PLANE_KUBECTL_CONTEXT")
-
-	store, err := newServiceStore(storePath)
+	store, err := newServiceStore(cfg.StorePath)
 	if err != nil {
 		log.Fatalf("control-plane store setup failed: %v", err)
 	}
 
-	deployer := newKubectlDeployer(kubectlBinary, kubectlContext)
+	deployer, err := newManifestDeployerFromConfig(cfg)
+	if err != nil {
+		log.Fatalf("control-plane deployer setup failed: %v", err)
+	}
 
 	server := &http.Server{
-		Addr:              listenAddr,
-		Handler:           newAPIServer(store, defaultNamespace, deployer).routes(),
+		Addr:              cfg.ListenAddr,
+		Handler:           newAPIServer(store, cfg.TargetNamespace, deployer).routes(),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
-	log.Printf("control-plane listening on %s", listenAddr)
-	if storePath != "" {
-		log.Printf("control-plane persistence enabled at %s", storePath)
+	log.Printf("control-plane listening on %s", cfg.ListenAddr)
+	log.Printf("control-plane target namespace %s", cfg.TargetNamespace)
+	log.Printf("control-plane deployer mode %s", cfg.DeployerMode)
+	if cfg.StorePath != "" {
+		log.Printf("control-plane persistence enabled at %s", cfg.StorePath)
 	}
-	if kubectlContext != "" {
-		log.Printf("control-plane kubectl context set to %s", kubectlContext)
+	if cfg.KubeContext != "" {
+		log.Printf("control-plane Kubernetes context set to %s", cfg.KubeContext)
 	}
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("control-plane server failed: %v", err)

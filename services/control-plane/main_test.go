@@ -5,15 +5,19 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
+
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 func TestValidateServiceDefinition(t *testing.T) {
@@ -293,6 +297,162 @@ func TestRenderManifestBundleWithAutoscaling(t *testing.T) {
 	}
 	if _, ok := container["envFrom"].([]any); !ok {
 		t.Fatalf("expected deployment to reference the config map via envFrom")
+	}
+}
+
+func TestClientGoResourceIntentWithAutoscaling(t *testing.T) {
+	def := serviceDefinition{
+		Name:     "fastapi-service",
+		Image:    "service-launchpad/fastapi-service:dev",
+		Port:     8000,
+		Replicas: 1,
+		Autoscaling: autoscalingConfig{
+			Enabled:              true,
+			MinReplicas:          1,
+			MaxReplicas:          5,
+			TargetCPUUtilization: 60,
+		},
+	}
+
+	intent, err := clientGoResourceIntent(renderManifestBundle(def, defaultNamespace))
+	if err != nil {
+		t.Fatalf("clientGoResourceIntent returned error: %v", err)
+	}
+
+	want := []schema.GroupVersionKind{
+		{Version: "v1", Kind: "Namespace"},
+		{Version: "v1", Kind: "ConfigMap"},
+		{Group: "apps", Version: "v1", Kind: "Deployment"},
+		{Version: "v1", Kind: "Service"},
+		{Group: "autoscaling", Version: "v2", Kind: "HorizontalPodAutoscaler"},
+	}
+
+	if !reflect.DeepEqual(intent, want) {
+		t.Fatalf("unexpected resource intent:\nwant: %#v\n got: %#v", want, intent)
+	}
+}
+
+func TestClientGoResourceIntentWithoutAutoscaling(t *testing.T) {
+	def := serviceDefinition{
+		Name:     "generic-service",
+		Image:    "service-launchpad/generic-service:dev",
+		Port:     8080,
+		Replicas: 2,
+	}
+
+	intent, err := clientGoResourceIntent(renderManifestBundle(def, defaultNamespace))
+	if err != nil {
+		t.Fatalf("clientGoResourceIntent returned error: %v", err)
+	}
+
+	want := []schema.GroupVersionKind{
+		{Version: "v1", Kind: "Namespace"},
+		{Group: "apps", Version: "v1", Kind: "Deployment"},
+		{Version: "v1", Kind: "Service"},
+	}
+
+	if !reflect.DeepEqual(intent, want) {
+		t.Fatalf("unexpected resource intent:\nwant: %#v\n got: %#v", want, intent)
+	}
+}
+
+func TestNewManifestDeployerFromConfigSelectsKubectl(t *testing.T) {
+	deployer, err := newManifestDeployerFromConfig(controlPlaneConfig{
+		DeployerMode:  "kubectl",
+		KubectlBinary: "kubectl",
+		KubeContext:   "service-launchpad",
+	})
+	if err != nil {
+		t.Fatalf("newManifestDeployerFromConfig returned error: %v", err)
+	}
+
+	if _, ok := deployer.(*kubectlDeployer); !ok {
+		t.Fatalf("expected kubectlDeployer, got %T", deployer)
+	}
+}
+
+func TestNewManifestDeployerFromConfigSelectsClientGo(t *testing.T) {
+	deployer, err := newManifestDeployerFromConfig(controlPlaneConfig{
+		DeployerMode: "client-go",
+		KubeContext:  "service-launchpad",
+	})
+	if err != nil {
+		t.Fatalf("newManifestDeployerFromConfig returned error: %v", err)
+	}
+
+	if _, ok := deployer.(*clientGoDeployer); !ok {
+		t.Fatalf("expected clientGoDeployer, got %T", deployer)
+	}
+}
+
+func TestNewManifestDeployerFromConfigSupportsDisabledMode(t *testing.T) {
+	deployer, err := newManifestDeployerFromConfig(controlPlaneConfig{DeployerMode: "disabled"})
+	if err != nil {
+		t.Fatalf("newManifestDeployerFromConfig returned error: %v", err)
+	}
+	if deployer != nil {
+		t.Fatalf("expected nil deployer for disabled mode, got %T", deployer)
+	}
+}
+
+func TestNewManifestDeployerFromConfigRejectsUnknownMode(t *testing.T) {
+	_, err := newManifestDeployerFromConfig(controlPlaneConfig{DeployerMode: "shell"})
+	if err == nil {
+		t.Fatalf("expected unsupported deployer mode error")
+	}
+	if !strings.Contains(err.Error(), "unsupported CONTROL_PLANE_DEPLOYER_MODE") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestLoadControlPlaneConfigReadsEnvironment(t *testing.T) {
+	t.Setenv("CONTROL_PLANE_LISTEN_ADDR", "127.0.0.1:9090")
+	t.Setenv("CONTROL_PLANE_STORE_PATH", "/tmp/services.json")
+	t.Setenv(envTargetNamespace, "service-launchpad-prod")
+	t.Setenv(envDeployerMode, "kubectl")
+	t.Setenv("CONTROL_PLANE_KUBECTL_BIN", "/usr/local/bin/kubectl")
+	t.Setenv(envKubeContext, "prod")
+
+	cfg := loadControlPlaneConfig()
+
+	if cfg.ListenAddr != "127.0.0.1:9090" {
+		t.Fatalf("unexpected listen addr: %s", cfg.ListenAddr)
+	}
+	if cfg.StorePath != "/tmp/services.json" {
+		t.Fatalf("unexpected store path: %s", cfg.StorePath)
+	}
+	if cfg.TargetNamespace != "service-launchpad-prod" {
+		t.Fatalf("unexpected namespace: %s", cfg.TargetNamespace)
+	}
+	if cfg.DeployerMode != "kubectl" {
+		t.Fatalf("unexpected deployer mode: %s", cfg.DeployerMode)
+	}
+	if cfg.KubectlBinary != "/usr/local/bin/kubectl" {
+		t.Fatalf("unexpected kubectl binary: %s", cfg.KubectlBinary)
+	}
+	if cfg.KubeContext != "prod" {
+		t.Fatalf("unexpected kube context: %s", cfg.KubeContext)
+	}
+}
+
+func TestBuildKubernetesRESTConfigFromExplicitEndpoint(t *testing.T) {
+	t.Setenv(envKubeAPIServer, "https://10.0.0.1")
+	t.Setenv(envKubeCAData, base64.StdEncoding.EncodeToString([]byte("test-ca")))
+	t.Setenv(envKubeBearerToken, "test-token")
+
+	cfg, err := buildKubernetesRESTConfig("")
+	if err != nil {
+		t.Fatalf("buildKubernetesRESTConfig returned error: %v", err)
+	}
+
+	if cfg.Host != "https://10.0.0.1" {
+		t.Fatalf("unexpected host: %s", cfg.Host)
+	}
+	if string(cfg.CAData) != "test-ca" {
+		t.Fatalf("unexpected CA data: %q", string(cfg.CAData))
+	}
+	if cfg.BearerToken != "test-token" {
+		t.Fatalf("unexpected bearer token: %s", cfg.BearerToken)
 	}
 }
 

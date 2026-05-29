@@ -1,7 +1,5 @@
 package main
 
-// adds a small `kubectl apply -f -` deployer abstraction
-
 import (
 	"bytes"
 	"context"
@@ -13,8 +11,10 @@ import (
 const defaultKubectlBinary = "kubectl"
 
 type applyResult struct {
-	Command string `json:"command"`
-	Output  string `json:"output,omitempty"`
+	Deployer string   `json:"deployer"`
+	Command  string   `json:"command,omitempty"`
+	Output   string   `json:"output,omitempty"`
+	Applied  []string `json:"applied,omitempty"`
 }
 
 type manifestDeployer interface {
@@ -51,8 +51,9 @@ func (d *kubectlDeployer) Apply(ctx context.Context, bundle manifestBundle) (app
 	}
 
 	return applyResult{
-		Command: resourceResult.Command,
-		Output:  strings.TrimSpace(namespaceResult.Output + "\n" + resourceResult.Output),
+		Deployer: "kubectl",
+		Command:  resourceResult.Command,
+		Output:   strings.TrimSpace(namespaceResult.Output + "\n" + resourceResult.Output),
 	}, nil
 }
 
@@ -81,8 +82,9 @@ func (d *kubectlDeployer) runApply(ctx context.Context, manifestsYAML string) (a
 		}
 
 		return applyResult{
-			Command: buildCommandString(d.binary, args),
-			Output:  output,
+			Deployer: "kubectl",
+			Command:  buildCommandString(d.binary, args),
+			Output:   output,
 		}, fmt.Errorf("%s: %w", output, err)
 	}
 
@@ -92,8 +94,9 @@ func (d *kubectlDeployer) runApply(ctx context.Context, manifestsYAML string) (a
 	}
 
 	return applyResult{
-		Command: buildCommandString(d.binary, args),
-		Output:  output,
+		Deployer: "kubectl",
+		Command:  buildCommandString(d.binary, args),
+		Output:   output,
 	}, nil
 }
 
