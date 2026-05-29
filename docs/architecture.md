@@ -176,6 +176,75 @@ There is no ingress controller in the current local path. That is intentional: t
 | IAM | Local developer identity. | Least-privilege Cloud Run service account, GKE API permissions, and Kubernetes permissions for managed resources. |
 | Storage retention | Local ephemeral stores. | Explicit retention, backup, object storage, and cost controls. |
 
+## Target Control Plane Runtime Model
+
+The target model keeps the control plane outside Kubernetes in every environment:
+
+- local development runs the Go binary on the developer host and targets Minikube
+- production runs the same Go binary on Cloud Run and targets `GKE production`
+
+This is intentional. Service Launchpad is an admin-style deployment API, not a long-running Kubernetes controller yet. Keeping it external avoids coupling the platform API lifecycle to a specific cluster, makes Cloud Run IAM the first production API gate, and keeps the control plane independently deployable from the workloads it manages.
+
+### Deployer Path
+
+The shared deployer target is `client-go`, not `kubectl`.
+
+Minikube should validate the same `client-go` resource intent before production uses it against GKE. This keeps local testing meaningful: the local path should exercise Kubernetes API objects through typed clients, not a separate shell command path that only works on a developer machine.
+
+`kubectl` remains useful, but only as a local fallback / debug deployer after `client-go` exists. It should not be the production path because it depends on local binaries, local kubeconfig state, shell execution, and a less explicit authentication model.
+
+The first `client-go` deployer should create or update:
+
+- `Namespace`
+- `ConfigMap`
+- `Deployment`
+- `Service`
+- `HorizontalPodAutoscaler`
+
+### Production Cloud Run Path
+
+Production runs the control plane on Cloud Run using a dedicated Google service account:
+
+```text
+service-launchpad-prod-control-plane@<project-id>.iam.gserviceaccount.com
+```
+
+Cloud Run should receive the target GKE cluster connection settings through environment variables or mounted configuration:
+
+- Kubernetes API endpoint
+- cluster CA certificate
+- target namespace
+- deployer mode
+
+For a private GKE control-plane endpoint, Cloud Run needs VPC egress into the production VPC so it can reach the private Kubernetes API address. For a public endpoint, the endpoint must still be protected with explicit IAM authentication and a consciously chosen network access policy; public-by-accident is not acceptable for the production control plane.
+
+The Cloud Run service account needs only the Google permissions required to discover or reach the cluster. If the endpoint and CA are provided by configuration, the IAM requirement can stay narrow. If the service resolves cluster metadata dynamically, grant a read-only GKE permission such as cluster viewer access instead of broad project roles. IAM authenticates the Google identity; Kubernetes RBAC still authorizes what that identity can do inside the cluster.
+
+### Kubernetes RBAC
+
+The Cloud Run service account should be bound in `GKE production` to the smallest Kubernetes permissions needed by the deployer:
+
+- cluster-scoped permission to `get`, `create`, `update`, and `patch` the managed `Namespace`
+- namespace-scoped permissions to `get`, `list`, `watch`, `create`, `update`, and `patch`:
+  - `ConfigMap`
+  - `Service`
+  - `Deployment`
+  - `HorizontalPodAutoscaler`
+
+It should not receive `cluster-admin`, broad secret access, node access, pod exec, or permissions to mutate unrelated namespaces. Delete permissions should be added only if the product explicitly supports service deletion or rollback cleanup.
+
+### Future TODOs
+
+The target model deliberately leaves these out of the current task:
+
+- a separate staging environment and promotion flow
+- richer control-plane authorization beyond Cloud Run IAM
+- audit-log storage for service registration and deployment actions
+- progressive delivery, rollback, and health-based rollout gates
+- controller-style reconciliation and drift correction
+- production observability for Cloud Run metrics and traces
+- stricter egress control, private service access, and endpoint hardening
+
 ## GKE Network Boundaries
 
 The planned production GKE architecture should keep the same logical components but add cloud network boundaries:
