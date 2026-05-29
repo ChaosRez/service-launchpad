@@ -93,7 +93,7 @@ Cluster apply:
 - targets the current `kubectl` context by default
 - can target an explicit context with `CONTROL_PLANE_KUBECTL_CONTEXT`
 
-The `kubectl` deployer is the local implementation path. It should remain documented as a deliberate shortcut, and the GKE-facing deployer should migrate toward `client-go` so the control plane can use typed Kubernetes clients, explicit identities, and RBAC instead of relying on a developer machine's active kubeconfig.
+The `kubectl` deployer is the initial local implementation path. Once the `client-go` deployer exists, `kubectl` should remain only as a local fallback / debug path. The shared `client-go` deployer should be tested against Minikube before Cloud Run uses it to manage the production GKE cluster with a dedicated Google service account.
 
 Current prerequisite:
 

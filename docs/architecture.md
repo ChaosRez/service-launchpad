@@ -1,6 +1,6 @@
 # Service Launchpad Architecture
 
-Service Launchpad is a small platform-engineering demo that shows how a control plane can register, deploy, scale, and observe a service on Kubernetes. The current implementation is optimized for the local `Minikube` path through Phase 5, with a required follow-up path to `GKE staging` and a concrete `GKE production` target shape.
+Service Launchpad is a small platform-engineering demo that shows how an external control plane can register, deploy, scale, and observe a service on Kubernetes. The current implementation is optimized for the local `Minikube` path, with a required production path where the same control-plane service runs on Cloud Run and deploys workloads to `GKE production`.
 
 ## Goals
 
@@ -8,7 +8,7 @@ Service Launchpad is a small platform-engineering demo that shows how a control 
 - Demonstrate Kubernetes deployment primitives: `Deployment`, `Service`, `ConfigMap`, and `HorizontalPodAutoscaler`.
 - Make both the workload and platform layer visible through metrics, logs, traces, and dashboards.
 - Keep local development simple enough to demo live in an interview.
-- Make cloud Kubernetes, Terraform, IAM, and stronger deployment safety part of the required staging / production story.
+- Make cloud Kubernetes, Cloud Run, Terraform, IAM, and stronger deployment safety part of the required production story.
 
 ## Components
 
@@ -20,13 +20,13 @@ Service Launchpad is a small platform-engineering demo that shows how a control 
 | Monitoring stack | `k8s/monitoring` | VictoriaMetrics, Mimir, vmagent, kube-state-metrics, Tempo, Loki, Promtail, and Grafana dashboards. |
 | Load test | `loadtests/k6` and `scripts/load-test-fastapi-service.sh` | In-cluster `k6` load generation against the workload service. |
 | Minikube bootstrap | `scripts/bootstrap-minikube.sh` | Local cluster setup and developer bootstrap flow. |
-| Terraform and GKE path | `infra/terraform` | Planned cloud infrastructure path for GCP IAM, networking, required `GKE staging`, and the `GKE production` target shape. |
+| Terraform and GKE path | `infra/terraform` | Planned cloud infrastructure path for GCP IAM, networking, Cloud Run control plane, and required `GKE production`. |
 
 ## Current Local Architecture
 
-The current local architecture intentionally keeps the Go control plane outside Kubernetes. It shells out to local `kubectl`, so it uses the developer machine's kubeconfig and active context. This is simpler for the current phase and keeps cluster credentials out of an in-cluster control-plane pod.
+The current local architecture intentionally keeps the Go control plane outside Kubernetes. It shells out to local `kubectl`, so it uses the developer machine's kubeconfig and active context. This is simpler for the current phase and avoids designing production cloud identity before the local platform flow is proven.
 
-This `kubectl` shell-out is a deliberate local implementation shortcut, not the production-shaped endpoint. Before the `GKE` path is considered production-ready, the project must document and begin a migration to `client-go` or another typed Kubernetes API approach. The first migration target should cover the resources already generated today: `Namespace`, `ConfigMap`, `Deployment`, `Service`, and `HorizontalPodAutoscaler`.
+This `kubectl` shell-out is a deliberate local implementation shortcut. Once `client-go` exists, `kubectl` should remain only as a local fallback / debug path. Minikube should validate the same `client-go` deployer path before Cloud Run uses it against `GKE production`. The first `client-go` target should cover the resources already generated today: `Namespace`, `ConfigMap`, `Deployment`, `Service`, and `HorizontalPodAutoscaler`.
 
 ```mermaid
 flowchart LR
@@ -166,34 +166,33 @@ There is no ingress controller in the current local path. That is intentional: t
 
 ## Local vs GKE Path
 
-| Concern | Local Minikube | Required GKE path |
+| Concern | Local Minikube | Required production path |
 | --- | --- | --- |
-| Control plane runtime | Runs on developer host. | Could run outside the cluster for admin workflows, or inside the cluster with RBAC and `client-go`. |
-| Cluster access | Local `kubectl` and kubeconfig. | GKE kubeconfig, Workload Identity, or CI/CD identity. |
-| Metrics scraping | In-cluster `vmagent` scrapes host via `host.minikube.internal`. | Prefer in-cluster control plane scraping, external scrape endpoint, or remote-write from the control plane. |
+| Control plane runtime | Runs on developer host. | Runs on Cloud Run, outside the cluster. |
+| Cluster access | Local kubeconfig through `client-go`; `kubectl` fallback after `client-go` exists. | External `client-go` to the GKE API, using the same deployer code path validated against Minikube. |
+| Metrics scraping | In-cluster `vmagent` scrapes host via `host.minikube.internal`. | Cloud Run logs go to Cloud Logging; durable metrics need explicit push/OTLP/remote-write or a future sidecar/exporter path. |
 | Workload exposure | ClusterIP and local port-forwarding. | Ingress or Gateway API with DNS and TLS. |
-| Networking | Single local Minikube network. | VPC, regional subnets, firewall rules, private or public control-plane endpoint decisions. |
-| IAM | Local developer identity. | Least-privilege service accounts, Workload Identity, and environment-specific roles. |
+| Networking | Single local Minikube network. | VPC, regional subnets, firewall rules, Cloud Run VPC egress, and private/ILB access to observability where needed. |
+| IAM | Local developer identity. | Least-privilege Cloud Run service account, GKE API permissions, and Kubernetes permissions for managed resources. |
 | Storage retention | Local ephemeral stores. | Explicit retention, backup, object storage, and cost controls. |
 
 ## GKE Network Boundaries
 
-The planned GKE architecture should keep the same logical components but add cloud network boundaries:
+The planned production GKE architecture should keep the same logical components but add cloud network boundaries:
 
 - A dedicated VPC for the project or environment.
 - Separate subnet ranges for GKE nodes and pods/services when using VPC-native clusters.
 - Explicit firewall rules for cluster access.
-- A clear decision for public vs private GKE control-plane endpoint access.
+- A clear decision for public vs private GKE Kubernetes API endpoint access from Cloud Run.
 - Ingress or Gateway API for any external application traffic.
 - Internal service-to-service traffic through Kubernetes `Service` DNS.
-- Observability access through private services, port-forwarding, or authenticated ingress depending on environment.
+- Observability access through private services first, and Internal Load Balancers (`ILB`) only where Cloud Run or trusted clients need network reachability.
 
-For staging and production, the control plane should not rely on a developer laptop. The likely GKE direction is either:
+For production, the control plane should not rely on a developer laptop. The chosen production direction is:
 
-- run the control plane inside the cluster with namespace-scoped RBAC and `client-go`, or
-- run it as an external service with a dedicated cloud identity and a secure Kubernetes API access path.
+- run the control plane on Cloud Run with a dedicated Google service account and secure Kubernetes API access.
 
-The in-cluster model is closer to a Kubernetes operator or platform controller. The external model is closer to an admin API or deployment orchestrator. Both are valid, but production would need explicit authentication, authorization, audit logging, and deployment rollback behavior.
+This external model is closer to an admin API or deployment orchestrator. Production still needs explicit authentication, authorization, audit logging, and deployment rollback behavior.
 
 ## Ingress and Traffic Boundaries
 
@@ -203,12 +202,13 @@ Current local path:
 - workload traffic stays inside the cluster
 - developer access uses API calls, port-forwarding, or scripts
 
-Required GKE path:
+Required production path:
 
 - external users reach workloads through Ingress or Gateway API
 - TLS terminates at the load balancer or ingress controller
 - internal service calls use Kubernetes DNS and ClusterIP services
-- Grafana and observability backends should be private or protected by authentication
+- clients reach the control-plane API through authenticated Cloud Run access
+- Grafana and observability backends should be private, with ILB exposure only where required
 
 ## Reliability and Scaling
 
@@ -230,15 +230,15 @@ The control plane has:
 High-priority follow-up:
 
 - add CI that runs Go tests and Kubernetes manifest validation
-- keep the GCP / Terraform slice concrete with VPC, service account, IAM notes, and a minimal GKE cluster module or module stub
-- document the `kubectl` shell-out and migrate the production-shaped deployer toward `client-go`
+- keep the GCP / Terraform slice concrete with VPC, Cloud Run service account, IAM notes, Artifact Registry, and a minimal GKE cluster module
+- document the `kubectl` shell-out and implement the shared `client-go` deployer for Minikube and `GKE production`
 
 Intentional simplifications:
 
 - deployments are applied with `kubectl`, not `client-go`
 - storage is in-memory or JSON file backed, not a database
 - generated manifests are simple and explicit
-- no authn/authz yet on the control-plane API
+- no authn/authz yet on the local control-plane API; production Cloud Run access should be authenticated
 - no rollback strategy yet
 - no multi-environment release promotion yet
 
@@ -246,9 +246,9 @@ Intentional simplifications:
 
 Current local security is intentionally lightweight. Before using this outside a local demo, the project would need:
 
-- authentication on the control-plane API
+- authentication on the control-plane API, with Cloud Run IAM as the first production gate
 - authorization around who can register or deploy services
-- tighter Kubernetes RBAC
+- tightly scoped Kubernetes permissions for the Cloud Run service account
 - audit logging for deployment actions
 - image provenance or admission controls
 - secret handling through Kubernetes `Secret` or an external secret manager
@@ -261,4 +261,4 @@ Current local security is intentionally lightweight. Before using this outside a
 - Observability covers both the managed workload and the platform service itself.
 - VictoriaMetrics is the fast local metrics store; Mimir is included to discuss longer-term storage tradeoffs.
 - Tempo and Loki complete the metrics, traces, and logs story.
-- The GKE path is required for staging and production, with optional extensions reserved for deeper hardening or extra cloud integrations.
+- The GKE production path is required, with Cloud Run as the external control-plane runtime. Staging is a future TODO.
