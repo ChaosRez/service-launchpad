@@ -93,6 +93,8 @@ Cluster apply:
 - targets the current `kubectl` context by default
 - can target an explicit context with `CONTROL_PLANE_KUBECTL_CONTEXT`
 
+The `kubectl` deployer is the local implementation path. It should remain documented as a deliberate shortcut, and the GKE-facing deployer should migrate toward `client-go` so the control plane can use typed Kubernetes clients, explicit identities, and RBAC instead of relying on a developer machine's active kubeconfig.
+
 Current prerequisite:
 
 - the referenced container image must already be available to the target cluster

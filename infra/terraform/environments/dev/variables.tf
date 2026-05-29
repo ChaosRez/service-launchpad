@@ -130,3 +130,9 @@ variable "artifact_bucket_noncurrent_retention_days" {
     error_message = "artifact_bucket_noncurrent_retention_days must be at least 1."
   }
 }
+
+variable "gke_cluster_stub_enabled" {
+  description = "Reserved switch for the deferred GKE module. Must remain false until the real cluster module is implemented."
+  type        = bool
+  default     = false
+}

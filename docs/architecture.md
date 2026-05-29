@@ -1,6 +1,6 @@
 # Service Launchpad Architecture
 
-Service Launchpad is a small platform-engineering demo that shows how a control plane can register, deploy, scale, and observe a service on Kubernetes. The current implementation is optimized for the local `Minikube` path through Phase 5, with explicit notes for how the same shape would evolve toward `GKE`.
+Service Launchpad is a small platform-engineering demo that shows how a control plane can register, deploy, scale, and observe a service on Kubernetes. The current implementation is optimized for the local `Minikube` path through Phase 5, with a required follow-up path to `GKE staging` and a concrete `GKE production` target shape.
 
 ## Goals
 
@@ -8,7 +8,7 @@ Service Launchpad is a small platform-engineering demo that shows how a control 
 - Demonstrate Kubernetes deployment primitives: `Deployment`, `Service`, `ConfigMap`, and `HorizontalPodAutoscaler`.
 - Make both the workload and platform layer visible through metrics, logs, traces, and dashboards.
 - Keep local development simple enough to demo live in an interview.
-- Leave clear extension points for cloud Kubernetes, Terraform, IAM, and stronger deployment safety.
+- Make cloud Kubernetes, Terraform, IAM, and stronger deployment safety part of the required staging / production story.
 
 ## Components
 
@@ -20,11 +20,13 @@ Service Launchpad is a small platform-engineering demo that shows how a control 
 | Monitoring stack | `k8s/monitoring` | VictoriaMetrics, Mimir, vmagent, kube-state-metrics, Tempo, Loki, Promtail, and Grafana dashboards. |
 | Load test | `loadtests/k6` and `scripts/load-test-fastapi-service.sh` | In-cluster `k6` load generation against the workload service. |
 | Minikube bootstrap | `scripts/bootstrap-minikube.sh` | Local cluster setup and developer bootstrap flow. |
-| Terraform and GKE path | `infra/terraform` | Planned cloud infrastructure path for GCP IAM, networking, and optional GKE deployment. |
+| Terraform and GKE path | `infra/terraform` | Planned cloud infrastructure path for GCP IAM, networking, required `GKE staging`, and the `GKE production` target shape. |
 
 ## Current Local Architecture
 
 The current local architecture intentionally keeps the Go control plane outside Kubernetes. It shells out to local `kubectl`, so it uses the developer machine's kubeconfig and active context. This is simpler for the current phase and keeps cluster credentials out of an in-cluster control-plane pod.
+
+This `kubectl` shell-out is a deliberate local implementation shortcut, not the production-shaped endpoint. Before the `GKE` path is considered production-ready, the project must document and begin a migration to `client-go` or another typed Kubernetes API approach. The first migration target should cover the resources already generated today: `Namespace`, `ConfigMap`, `Deployment`, `Service`, and `HorizontalPodAutoscaler`.
 
 ```mermaid
 flowchart LR
@@ -164,7 +166,7 @@ There is no ingress controller in the current local path. That is intentional: t
 
 ## Local vs GKE Path
 
-| Concern | Local Minikube | Future GKE path |
+| Concern | Local Minikube | Required GKE path |
 | --- | --- | --- |
 | Control plane runtime | Runs on developer host. | Could run outside the cluster for admin workflows, or inside the cluster with RBAC and `client-go`. |
 | Cluster access | Local `kubectl` and kubeconfig. | GKE kubeconfig, Workload Identity, or CI/CD identity. |
@@ -186,7 +188,7 @@ The planned GKE architecture should keep the same logical components but add clo
 - Internal service-to-service traffic through Kubernetes `Service` DNS.
 - Observability access through private services, port-forwarding, or authenticated ingress depending on environment.
 
-For staging and production, the control plane should not rely on a developer laptop. The likely production direction is either:
+For staging and production, the control plane should not rely on a developer laptop. The likely GKE direction is either:
 
 - run the control plane inside the cluster with namespace-scoped RBAC and `client-go`, or
 - run it as an external service with a dedicated cloud identity and a secure Kubernetes API access path.
@@ -201,7 +203,7 @@ Current local path:
 - workload traffic stays inside the cluster
 - developer access uses API calls, port-forwarding, or scripts
 
-Future GKE path:
+Required GKE path:
 
 - external users reach workloads through Ingress or Gateway API
 - TLS terminates at the load balancer or ingress controller
@@ -224,6 +226,12 @@ The control plane has:
 - health and readiness endpoints
 - deployment success and failure metrics
 - deployment duration histogram
+
+High-priority follow-up:
+
+- add CI that runs Go tests and Kubernetes manifest validation
+- keep the GCP / Terraform slice concrete with VPC, service account, IAM notes, and a minimal GKE cluster module or module stub
+- document the `kubectl` shell-out and migrate the production-shaped deployer toward `client-go`
 
 Intentional simplifications:
 
@@ -248,9 +256,9 @@ Current local security is intentionally lightweight. Before using this outside a
 
 ## Talking Points for interview
 
-- The project starts with Minikube to prove the platform workflow quickly before adding cloud complexity.
+- The project starts with Minikube to prove the platform workflow quickly before moving to required cloud validation.
 - The control plane stays outside the cluster for now because it shells out to `kubectl`.
 - Observability covers both the managed workload and the platform service itself.
 - VictoriaMetrics is the fast local metrics store; Mimir is included to discuss longer-term storage tradeoffs.
 - Tempo and Loki complete the metrics, traces, and logs story.
-- The GKE path is intentionally framed as a next step with stronger IAM, networking, and runtime decisions.
+- The GKE path is required for staging and production, with optional extensions reserved for deeper hardening or extra cloud integrations.

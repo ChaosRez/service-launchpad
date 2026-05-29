@@ -57,3 +57,13 @@ output "control_plane_service_account_email" {
   description = "Email of the dev control-plane service account."
   value       = google_service_account.control_plane.email
 }
+
+output "gke_cluster_module_status" {
+  description = "Status of the deferred GKE module stub."
+  value       = module.gke_cluster.implementation_status
+}
+
+output "gke_cluster_planned_name" {
+  description = "Planned name for the future dev GKE cluster."
+  value       = module.gke_cluster.cluster_name
+}
