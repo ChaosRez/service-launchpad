@@ -10,3 +10,8 @@ labels = {
 # Optional
 # artifact_bucket_name          = "globally-unique-bucket-name"
 # artifact_bucket_force_destroy = true
+
+# Optional Cloud Run control-plane overrides.
+# control_plane_container_image = "europe-west10-docker.pkg.dev/your-gcp-project-id/service-launchpad/control-plane:dev"
+# control_plane_kube_api_server = "https://<gke-api-endpoint>"
+# control_plane_kube_ca_data    = "<base64-encoded-cluster-ca>"

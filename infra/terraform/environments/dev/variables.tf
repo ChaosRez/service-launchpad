@@ -131,8 +131,101 @@ variable "artifact_bucket_noncurrent_retention_days" {
   }
 }
 
+variable "artifact_registry_repository_id" {
+  description = "Artifact Registry repository ID for Service Launchpad container images."
+  type        = string
+  default     = "service-launchpad"
+
+  validation {
+    condition     = can(regex("^[a-z][a-z0-9-]{1,61}[a-z0-9]$", var.artifact_registry_repository_id))
+    error_message = "artifact_registry_repository_id must be 3-63 characters, start with a lowercase letter, and contain only lowercase letters, numbers, and hyphens."
+  }
+}
+
 variable "gke_cluster_stub_enabled" {
   description = "Reserved switch for the deferred GKE module. Must remain false until the real cluster module is implemented."
   type        = bool
   default     = false
+}
+
+variable "control_plane_container_image" {
+  description = "Container image for the Cloud Run control-plane service. Defaults to the expected Artifact Registry image path."
+  type        = string
+  default     = null
+}
+
+variable "control_plane_ingress" {
+  description = "Cloud Run ingress policy for the control-plane service."
+  type        = string
+  default     = "INGRESS_TRAFFIC_ALL"
+
+  validation {
+    condition = contains([
+      "INGRESS_TRAFFIC_ALL",
+      "INGRESS_TRAFFIC_INTERNAL_ONLY",
+      "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+    ], var.control_plane_ingress)
+    error_message = "control_plane_ingress must be a valid Cloud Run ingress enum."
+  }
+}
+
+variable "control_plane_vpc_egress" {
+  description = "Cloud Run VPC egress policy for the control-plane service."
+  type        = string
+  default     = "PRIVATE_RANGES_ONLY"
+
+  validation {
+    condition = contains([
+      "PRIVATE_RANGES_ONLY",
+      "ALL_TRAFFIC",
+    ], var.control_plane_vpc_egress)
+    error_message = "control_plane_vpc_egress must be PRIVATE_RANGES_ONLY or ALL_TRAFFIC."
+  }
+}
+
+variable "control_plane_min_instances" {
+  description = "Minimum Cloud Run instances for the control-plane service."
+  type        = number
+  default     = 0
+
+  validation {
+    condition     = var.control_plane_min_instances >= 0
+    error_message = "control_plane_min_instances must be greater than or equal to 0."
+  }
+}
+
+variable "control_plane_max_instances" {
+  description = "Maximum Cloud Run instances for the control-plane service."
+  type        = number
+  default     = 2
+
+  validation {
+    condition     = var.control_plane_max_instances >= 1
+    error_message = "control_plane_max_instances must be greater than or equal to 1."
+  }
+}
+
+variable "control_plane_deletion_protection" {
+  description = "Whether deletion protection is enabled for the Cloud Run control-plane service."
+  type        = bool
+  default     = false
+}
+
+variable "control_plane_target_namespace" {
+  description = "Kubernetes namespace targeted by the Cloud Run control-plane deployer."
+  type        = string
+  default     = "service-launchpad-prod"
+}
+
+variable "control_plane_kube_api_server" {
+  description = "GKE Kubernetes API endpoint used by the Cloud Run control-plane deployer."
+  type        = string
+  default     = ""
+}
+
+variable "control_plane_kube_ca_data" {
+  description = "Base64-encoded GKE cluster CA data used by the Cloud Run control-plane deployer."
+  type        = string
+  default     = ""
+  sensitive   = true
 }
