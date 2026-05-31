@@ -14,12 +14,16 @@ resource "google_cloud_run_v2_service" "control_plane" {
       max_instance_count = var.control_plane_max_instances
     }
 
-    vpc_access {
-      egress = var.control_plane_vpc_egress
+    dynamic "vpc_access" {
+      for_each = var.control_plane_enable_vpc_egress ? [1] : []
 
-      network_interfaces {
-        network    = google_compute_network.dev.id
-        subnetwork = google_compute_subnetwork.dev.id
+      content {
+        egress = var.control_plane_vpc_egress
+
+        network_interfaces {
+          network    = google_compute_network.dev.id
+          subnetwork = google_compute_subnetwork.dev.id
+        }
       }
     }
 

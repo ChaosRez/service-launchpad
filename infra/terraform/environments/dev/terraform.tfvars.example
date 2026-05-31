@@ -15,3 +15,7 @@ labels = {
 # control_plane_container_image = "europe-west10-docker.pkg.dev/your-gcp-project-id/service-launchpad/control-plane:dev"
 # control_plane_kube_api_server = "https://<gke-api-endpoint>"
 # control_plane_kube_ca_data    = "<base64-encoded-cluster-ca>"
+# control_plane_enable_vpc_egress = true
+# control_plane_invoker_members = [
+#   "user:operator@example.com",
+# ]

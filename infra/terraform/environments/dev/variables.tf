@@ -169,8 +169,14 @@ variable "control_plane_ingress" {
   }
 }
 
+variable "control_plane_enable_vpc_egress" {
+  description = "Whether Cloud Run should use direct VPC egress. Keep false for easy demo teardown; enable when targeting a private GKE API endpoint."
+  type        = bool
+  default     = false
+}
+
 variable "control_plane_vpc_egress" {
-  description = "Cloud Run VPC egress policy for the control-plane service."
+  description = "Cloud Run VPC egress policy used when control_plane_enable_vpc_egress is true."
   type        = string
   default     = "PRIVATE_RANGES_ONLY"
 
@@ -228,4 +234,18 @@ variable "control_plane_kube_ca_data" {
   type        = string
   default     = ""
   sensitive   = true
+}
+
+variable "control_plane_invoker_members" {
+  description = "IAM members allowed to call the Cloud Run control-plane API. Use user:, group:, or serviceAccount: members; never allUsers."
+  type        = list(string)
+  default     = []
+
+  validation {
+    condition = alltrue([
+      for member in var.control_plane_invoker_members :
+      !contains(["allUsers", "allAuthenticatedUsers"], member)
+    ])
+    error_message = "Do not grant public or broad authenticated access to the production control-plane API."
+  }
 }

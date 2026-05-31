@@ -216,7 +216,7 @@ Cloud Run should receive the target GKE cluster connection settings through envi
 - target namespace
 - deployer mode
 
-For a private GKE control-plane endpoint, Cloud Run needs VPC egress into the production VPC so it can reach the private Kubernetes API address. For a public endpoint, the endpoint must still be protected with explicit IAM authentication and a consciously chosen network access policy; public-by-accident is not acceptable for the production control plane.
+For a private GKE control-plane endpoint, Cloud Run needs VPC egress into the production VPC so it can reach the private Kubernetes API address. This is configurable but not enabled by default in the current Terraform foundation because Cloud Run Direct VPC egress can leave Google-managed serverless IP reservations attached to a subnet for up to 1-2 hours after service deletion, delaying demo teardown. For a public endpoint, the endpoint must still be protected with explicit IAM authentication and a consciously chosen network access policy; public-by-accident is not acceptable for the production control plane.
 
 The Cloud Run service account needs only the Google permissions required to discover or reach the cluster. If the endpoint and CA are provided by configuration, the IAM requirement can stay narrow. If the service resolves cluster metadata dynamically, grant a read-only GKE permission such as cluster viewer access instead of broad project roles. IAM authenticates the Google identity; Kubernetes RBAC still authorizes what that identity can do inside the cluster.
 
@@ -232,6 +232,33 @@ The Cloud Run service account should be bound in `GKE production` to the smalles
   - `HorizontalPodAutoscaler`
 
 It should not receive `cluster-admin`, broad secret access, node access, pod exec, or permissions to mutate unrelated namespaces. Delete permissions should be added only if the product explicitly supports service deletion or rollback cleanup.
+
+### Production API Access
+
+The minimal production client access model is:
+
+- Cloud Run HTTPS endpoint
+- IAM-based invocation with `roles/run.invoker`
+- no unauthenticated public access
+
+Operators call the same API paths used locally, but production requests must include a Cloud Run identity token:
+
+```bash
+CONTROL_PLANE_URL="https://<cloud-run-service-url>"
+TOKEN="$(gcloud auth print-identity-token --audiences="${CONTROL_PLANE_URL}")"
+
+curl -X POST "${CONTROL_PLANE_URL}/services" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d @service-definition.json
+
+curl -X POST "${CONTROL_PLANE_URL}/services/fastapi-service/deploy" \
+  -H "Authorization: Bearer ${TOKEN}"
+```
+
+The caller identity needs `roles/run.invoker` on the Cloud Run service. It does not need direct Kubernetes permissions. Kubernetes operations are performed by the Cloud Run runtime service account, then constrained by GKE RBAC.
+
+Local development remains different by design: `http://127.0.0.1:8080` can stay unauthenticated as long as it is not exposed beyond the developer environment. Production must not use that trust model. If the demo needs to stay fully private, Cloud Run ingress can be restricted to internal or internal-load-balancer traffic while still requiring explicit IAM invocation.
 
 ### Future TODOs
 
