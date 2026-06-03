@@ -149,3 +149,9 @@ The control-plane dashboard shows scrape health, managed service count, service 
 
 The FastAPI dashboard shows workload availability, latency SLI, P95 latency, request rate, error rate, and replica behavior. This is the deployed service side of the project: an observable inference-style workload running on Kubernetes and exercised under load.
 
+### Tempo trace drilldown
+
+![Grafana Tempo trace drilldown for the Service Launchpad FastAPI service](docs/Tempo%20-%20traces.png)
+
+The Tempo view shows trace drilldown for the `POST /v1/chat/completions` workload path, including span timing, service metadata, runtime profile attributes, and OpenTelemetry resource attributes. This connects the service dashboard metrics to request-level debugging.
+
