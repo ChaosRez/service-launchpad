@@ -16,6 +16,17 @@ The preferred deployment smoke test now exercises the control plane instead of a
 ./scripts/smoke-test-fastapi-service.sh
 ```
 
+For an already-running Minikube environment, use an isolated namespace and control-plane port:
+
+```bash
+./scripts/smoke-test-fastapi-service.sh \
+  --skip-bootstrap \
+  --skip-image-build \
+  --namespace service-launchpad-smoke \
+  --control-plane-port 18080 \
+  --cleanup
+```
+
 The script:
 
 - starts `Minikube`
@@ -24,6 +35,7 @@ The script:
 - starts the control plane locally with a temporary JSON store
 - sets `CONTROL_PLANE_DEPLOYER_MODE=client-go`
 - points `CONTROL_PLANE_KUBE_CONTEXT` at the Minikube profile
+- sets `CONTROL_PLANE_TARGET_NAMESPACE` to the requested namespace
 - registers `fastapi-service`
 - validates the rendered manifests
 - deploys through `POST /services/fastapi-service/deploy`
@@ -31,6 +43,8 @@ The script:
 - waits for rollout and verifies the service endpoints
 
 Current prerequisite: the referenced image must already be available to the cluster. The smoke test handles that automatically for local Minikube by building the image into Minikube's Docker daemon first.
+
+Use `--skip-image-build` only when the image already exists in the Minikube Docker daemon or is pullable by the cluster.
 
 ## k6 Load Testing
 
