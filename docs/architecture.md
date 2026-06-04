@@ -276,13 +276,27 @@ The caller identity needs `roles/run.invoker` on the Cloud Run service. It does 
 
 Local development remains different by design: `http://127.0.0.1:8080` can stay unauthenticated as long as it is not exposed beyond the developer environment. Production must not use that trust model. If the demo needs to stay fully private, Cloud Run ingress can be restricted to internal or internal-load-balancer traffic while still requiring explicit IAM invocation.
 
+### Cloud Resource Integration
+
+The first production cloud-resource integration is deployment audit artifact storage in GCS. Terraform creates an artifact bucket and grants the Cloud Run service account bucket-level object creation permission. When `CONTROL_PLANE_AUDIT_BUCKET` is set, each deploy attempt writes a best-effort JSON record containing:
+
+- service definition
+- target namespace
+- generated Kubernetes manifests
+- deployer result
+- success or failure status
+- deployment duration
+- error details for failed applies
+
+Audit objects are stored under `control-plane/deployments/<yyyy>/<mm>/<dd>/<service>/<timestamp>-<status>.json`. The deploy API does not fail only because the audit write fails; GCS write errors are logged so deployment behavior stays driven by Kubernetes apply results.
+
 ### Future TODOs
 
 The target model deliberately leaves these out of the current task:
 
 - a separate staging environment and promotion flow
 - richer control-plane authorization beyond Cloud Run IAM
-- audit-log storage for service registration and deployment actions
+- queryable audit history, retention policy, and service registration audit records
 - progressive delivery, rollback, and health-based rollout gates
 - controller-style reconciliation and drift correction
 - production observability for Cloud Run metrics and traces

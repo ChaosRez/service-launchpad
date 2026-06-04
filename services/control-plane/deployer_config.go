@@ -23,6 +23,10 @@ const (
 	envKubeCAData          = "CONTROL_PLANE_KUBE_CA_DATA"
 	envKubeBearerToken     = "CONTROL_PLANE_KUBE_BEARER_TOKEN"
 	envKubeBearerTokenFile = "CONTROL_PLANE_KUBE_BEARER_TOKEN_FILE"
+	envAuditBucket         = "CONTROL_PLANE_AUDIT_BUCKET"
+	envAuditPrefix         = "CONTROL_PLANE_AUDIT_PREFIX"
+	envGCSEndpoint         = "CONTROL_PLANE_GCS_ENDPOINT"
+	envGCSBearerToken      = "CONTROL_PLANE_GCS_BEARER_TOKEN"
 )
 
 type controlPlaneConfig struct {
@@ -32,6 +36,10 @@ type controlPlaneConfig struct {
 	DeployerMode    string
 	KubectlBinary   string
 	KubeContext     string
+	AuditBucket     string
+	AuditPrefix     string
+	GCSEndpoint     string
+	GCSBearerToken  string
 }
 
 func loadControlPlaneConfig() controlPlaneConfig {
@@ -62,6 +70,10 @@ func loadControlPlaneConfig() controlPlaneConfig {
 		DeployerMode:    mode,
 		KubectlBinary:   os.Getenv("CONTROL_PLANE_KUBECTL_BIN"),
 		KubeContext:     kubeContext,
+		AuditBucket:     strings.TrimSpace(os.Getenv(envAuditBucket)),
+		AuditPrefix:     strings.TrimSpace(os.Getenv(envAuditPrefix)),
+		GCSEndpoint:     strings.TrimSpace(os.Getenv(envGCSEndpoint)),
+		GCSBearerToken:  strings.TrimSpace(os.Getenv(envGCSBearerToken)),
 	}
 }
 

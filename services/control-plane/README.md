@@ -130,6 +130,17 @@ CONTROL_PLANE_TARGET_NAMESPACE=service-launchpad-prod
 
 The external settings are the shape intended for Cloud Run once the production GKE access model is configured. The Cloud Run service account authenticates the runtime; Kubernetes RBAC still controls which resources can be created or updated.
 
+Optional deployment audit records:
+
+```bash
+CONTROL_PLANE_AUDIT_BUCKET=<gcs-bucket-name>
+CONTROL_PLANE_AUDIT_PREFIX=control-plane/deployments
+```
+
+When `CONTROL_PLANE_AUDIT_BUCKET` is set, every successful or failed deploy attempt writes a JSON audit artifact to GCS. The artifact includes the service definition, target namespace, generated manifests, deploy result, status, duration, and error details when deployment fails. Audit storage is best-effort: a GCS write failure is logged but does not change the deploy response status.
+
+Cloud Run uses its runtime service account and the metadata server to obtain the GCS access token. For local tests or controlled debugging, `CONTROL_PLANE_GCS_BEARER_TOKEN` and `CONTROL_PLANE_GCS_ENDPOINT` can override token and endpoint behavior.
+
 Current prerequisite:
 
 - the referenced container image must already be available to the target cluster

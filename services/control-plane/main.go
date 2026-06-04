@@ -21,10 +21,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("control-plane deployer setup failed: %v", err)
 	}
+	auditRecorder := newGCSAuditRecorder(cfg.AuditBucket, cfg.AuditPrefix, cfg.GCSEndpoint, cfg.GCSBearerToken)
 
 	server := &http.Server{
 		Addr:              cfg.ListenAddr,
-		Handler:           newAPIServer(store, cfg.TargetNamespace, deployer).routes(),
+		Handler:           newAPIServer(store, cfg.TargetNamespace, deployer, auditRecorder).routes(),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
@@ -36,6 +37,13 @@ func main() {
 	}
 	if cfg.KubeContext != "" {
 		log.Printf("control-plane Kubernetes context set to %s", cfg.KubeContext)
+	}
+	if cfg.AuditBucket != "" {
+		prefix := cfg.AuditPrefix
+		if prefix == "" {
+			prefix = defaultAuditPrefix
+		}
+		log.Printf("control-plane deployment audit enabled for gs://%s/%s", cfg.AuditBucket, prefix)
 	}
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("control-plane server failed: %v", err)

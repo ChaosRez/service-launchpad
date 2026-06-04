@@ -60,6 +60,16 @@ resource "google_cloud_run_v2_service" "control_plane" {
         value = var.control_plane_kube_ca_data
       }
 
+      env {
+        name  = "CONTROL_PLANE_AUDIT_BUCKET"
+        value = google_storage_bucket.artifacts.name
+      }
+
+      env {
+        name  = "CONTROL_PLANE_AUDIT_PREFIX"
+        value = "control-plane/deployments"
+      }
+
       startup_probe {
         initial_delay_seconds = 0
         period_seconds        = 10

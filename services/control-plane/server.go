@@ -3,6 +3,7 @@ package main
 // routing, handlers, JSON/error helpers
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -15,14 +16,21 @@ type apiServer struct {
 	namespace string
 	deployer  manifestDeployer
 	metrics   *controlPlaneMetrics
+	audit     auditRecorder
 }
 
-func newAPIServer(store *serviceStore, namespace string, deployer manifestDeployer) *apiServer {
+func newAPIServer(store *serviceStore, namespace string, deployer manifestDeployer, auditRecorders ...auditRecorder) *apiServer {
+	var audit auditRecorder
+	if len(auditRecorders) > 0 {
+		audit = auditRecorders[0]
+	}
+
 	return &apiServer{
 		store:     store,
 		namespace: namespace,
 		deployer:  deployer,
 		metrics:   newControlPlaneMetrics(store),
+		audit:     audit,
 	}
 }
 
@@ -50,6 +58,7 @@ func (a *apiServer) handleReady(w http.ResponseWriter, _ *http.Request) {
 		"deploymentEnabled":  a.deployer != nil,
 		"metricsEnabled":     a.metrics != nil,
 		"persistenceEnabled": a.store.storePath != "",
+		"auditEnabled":       a.audit != nil,
 	})
 }
 
@@ -151,26 +160,59 @@ func (a *apiServer) handleServiceDeploy(w http.ResponseWriter, r *http.Request, 
 	bundle := renderManifestBundle(service, a.namespace)
 	start := time.Now()
 	result, err := a.deployer.Apply(r.Context(), bundle)
+	duration := time.Since(start)
 	if err != nil {
-		a.metrics.recordDeployment("failure", time.Since(start))
+		a.metrics.recordDeployment("failure", duration)
 		log.Printf("failed to apply manifests for %s: %v", service.Name, err)
-		writeJSON(w, http.StatusBadGateway, map[string]any{
+		response := map[string]any{
 			"error":     "failed to apply manifests",
 			"service":   service.Name,
 			"namespace": a.namespace,
 			"details":   err.Error(),
-		})
+		}
+		if auditResult, auditErr := a.recordDeploymentAudit(r.Context(), service, bundle, result, "failure", duration, err); auditErr != nil {
+			log.Printf("failed to write deployment audit record for %s: %v", service.Name, auditErr)
+		} else if auditResult.Object != "" {
+			response["audit"] = auditResult
+		}
+		writeJSON(w, http.StatusBadGateway, response)
 		return
 	}
 
-	a.metrics.recordDeployment("success", time.Since(start))
-	writeJSON(w, http.StatusOK, map[string]any{
+	a.metrics.recordDeployment("success", duration)
+	response := map[string]any{
 		"status":    "applied",
 		"service":   service,
 		"namespace": a.namespace,
 		"result":    result,
 		"manifests": bundle,
-	})
+	}
+	if auditResult, auditErr := a.recordDeploymentAudit(r.Context(), service, bundle, result, "success", duration, nil); auditErr != nil {
+		log.Printf("failed to write deployment audit record for %s: %v", service.Name, auditErr)
+	} else if auditResult.Object != "" {
+		response["audit"] = auditResult
+	}
+	writeJSON(w, http.StatusOK, response)
+}
+
+func (a *apiServer) recordDeploymentAudit(ctx context.Context, service serviceDefinition, bundle manifestBundle, result applyResult, status string, duration time.Duration, deployErr error) (auditResult, error) {
+	if a.audit == nil {
+		return auditResult{}, nil
+	}
+
+	record := deploymentAuditRecord{
+		RecordedAt:           time.Now().UTC(),
+		Service:              service,
+		Namespace:            a.namespace,
+		Status:               status,
+		DurationMilliseconds: duration.Milliseconds(),
+		Result:               result,
+		Manifests:            bundle,
+	}
+	if deployErr != nil {
+		record.Error = deployErr.Error()
+	}
+	return a.audit.RecordDeployment(ctx, record)
 }
 
 func loggingMiddleware(next http.Handler) http.Handler {

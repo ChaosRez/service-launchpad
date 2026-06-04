@@ -8,8 +8,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -412,6 +414,10 @@ func TestLoadControlPlaneConfigReadsEnvironment(t *testing.T) {
 	t.Setenv(envDeployerMode, "kubectl")
 	t.Setenv("CONTROL_PLANE_KUBECTL_BIN", "/usr/local/bin/kubectl")
 	t.Setenv(envKubeContext, "prod")
+	t.Setenv(envAuditBucket, "service-launchpad-audit")
+	t.Setenv(envAuditPrefix, "control-plane/audit")
+	t.Setenv(envGCSEndpoint, "http://storage.example.test")
+	t.Setenv(envGCSBearerToken, "test-gcs-token")
 
 	cfg := loadControlPlaneConfig()
 
@@ -432,6 +438,18 @@ func TestLoadControlPlaneConfigReadsEnvironment(t *testing.T) {
 	}
 	if cfg.KubeContext != "prod" {
 		t.Fatalf("unexpected kube context: %s", cfg.KubeContext)
+	}
+	if cfg.AuditBucket != "service-launchpad-audit" {
+		t.Fatalf("unexpected audit bucket: %s", cfg.AuditBucket)
+	}
+	if cfg.AuditPrefix != "control-plane/audit" {
+		t.Fatalf("unexpected audit prefix: %s", cfg.AuditPrefix)
+	}
+	if cfg.GCSEndpoint != "http://storage.example.test" {
+		t.Fatalf("unexpected GCS endpoint: %s", cfg.GCSEndpoint)
+	}
+	if cfg.GCSBearerToken != "test-gcs-token" {
+		t.Fatalf("unexpected GCS bearer token: %s", cfg.GCSBearerToken)
 	}
 }
 
@@ -513,6 +531,60 @@ func TestHandleServiceDeploy(t *testing.T) {
 	}
 }
 
+func TestHandleServiceDeployWritesAuditRecord(t *testing.T) {
+	store, err := newServiceStore("")
+	if err != nil {
+		t.Fatalf("newServiceStore returned error: %v", err)
+	}
+
+	service, err := store.create(serviceDefinition{
+		Name:     "fastapi-service",
+		Image:    "service-launchpad/fastapi-service:dev",
+		Port:     8000,
+		Replicas: 1,
+	})
+	if err != nil {
+		t.Fatalf("create returned error: %v", err)
+	}
+
+	audit := &fakeAuditRecorder{
+		result: auditResult{
+			Bucket: "test-bucket",
+			Object: "control-plane/deployments/test.json",
+		},
+	}
+	server := newAPIServer(store, defaultNamespace, fakeDeployer{
+		result: applyResult{
+			Deployer: "client-go",
+			Applied:  []string{"Deployment/fastapi-service"},
+		},
+	}, audit)
+
+	req := httptest.NewRequest(http.MethodPost, "/services/"+service.Name+"/deploy", nil)
+	rec := httptest.NewRecorder()
+
+	server.routes().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", rec.Code)
+	}
+	if audit.calls != 1 {
+		t.Fatalf("expected one audit record, got %d", audit.calls)
+	}
+	if audit.lastRecord.Service.Name != "fastapi-service" {
+		t.Fatalf("unexpected audited service: %s", audit.lastRecord.Service.Name)
+	}
+	if audit.lastRecord.Status != "success" {
+		t.Fatalf("unexpected audit status: %s", audit.lastRecord.Status)
+	}
+	if audit.lastRecord.Manifests.Deployment["kind"] != "Deployment" {
+		t.Fatalf("expected deployment manifest in audit record")
+	}
+	if !strings.Contains(rec.Body.String(), `"object":"control-plane/deployments/test.json"`) {
+		t.Fatalf("expected audit object in response, got %s", rec.Body.String())
+	}
+}
+
 func TestHandleServiceDeployFailure(t *testing.T) {
 	store, err := newServiceStore("")
 	if err != nil {
@@ -542,6 +614,45 @@ func TestHandleServiceDeployFailure(t *testing.T) {
 	}
 	if !strings.Contains(rec.Body.String(), "failed to apply manifests") {
 		t.Fatalf("expected deploy failure message, got %s", rec.Body.String())
+	}
+}
+
+func TestHandleServiceDeployFailureWritesAuditRecord(t *testing.T) {
+	store, err := newServiceStore("")
+	if err != nil {
+		t.Fatalf("newServiceStore returned error: %v", err)
+	}
+
+	if _, err := store.create(serviceDefinition{
+		Name:     "fastapi-service",
+		Image:    "service-launchpad/fastapi-service:dev",
+		Port:     8000,
+		Replicas: 1,
+	}); err != nil {
+		t.Fatalf("create returned error: %v", err)
+	}
+
+	audit := &fakeAuditRecorder{}
+	server := newAPIServer(store, defaultNamespace, fakeDeployer{
+		err: errors.New("kubectl apply failed"),
+	}, audit)
+
+	req := httptest.NewRequest(http.MethodPost, "/services/fastapi-service/deploy", nil)
+	rec := httptest.NewRecorder()
+
+	server.routes().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadGateway {
+		t.Fatalf("expected status 502, got %d", rec.Code)
+	}
+	if audit.calls != 1 {
+		t.Fatalf("expected one audit record, got %d", audit.calls)
+	}
+	if audit.lastRecord.Status != "failure" {
+		t.Fatalf("unexpected audit status: %s", audit.lastRecord.Status)
+	}
+	if audit.lastRecord.Error != "kubectl apply failed" {
+		t.Fatalf("unexpected audit error: %s", audit.lastRecord.Error)
 	}
 }
 
@@ -713,6 +824,81 @@ func TestMetricsEndpointTracksDeploymentResultsAndDuration(t *testing.T) {
 	}
 }
 
+func TestGCSAuditRecorderUploadsDeploymentAuditRecord(t *testing.T) {
+	var requestPath string
+	var requestQuery url.Values
+	var requestAuth string
+	var requestBody []byte
+
+	recorder := newGCSAuditRecorder("test-bucket", "audit-prefix", "https://storage.example.test", "static-token").(*gcsAuditRecorder)
+	recorder.httpClient = &http.Client{
+		Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+			requestPath = r.URL.Path
+			requestQuery = r.URL.Query()
+			requestAuth = r.Header.Get("Authorization")
+
+			var err error
+			requestBody, err = io.ReadAll(r.Body)
+			if err != nil {
+				t.Fatalf("failed to read request body: %v", err)
+			}
+
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Status:     "200 OK",
+				Body:       io.NopCloser(strings.NewReader("{}")),
+				Header:     make(http.Header),
+				Request:    r,
+			}, nil
+		}),
+	}
+	recorder.now = func() time.Time {
+		return time.Date(2026, 6, 4, 12, 30, 0, 123456789, time.UTC)
+	}
+
+	service := serviceDefinition{
+		Name:     "fastapi-service",
+		Image:    "service-launchpad/fastapi-service:dev",
+		Port:     8000,
+		Replicas: 1,
+	}
+	result, err := recorder.RecordDeployment(context.Background(), deploymentAuditRecord{
+		Service:   service,
+		Namespace: "service-launchpad-prod",
+		Status:    "success",
+		Result: applyResult{
+			Deployer: "client-go",
+			Applied:  []string{"Deployment/fastapi-service"},
+		},
+		Manifests: renderManifestBundle(service, "service-launchpad-prod"),
+	})
+	if err != nil {
+		t.Fatalf("RecordDeployment returned error: %v", err)
+	}
+
+	if requestPath != "/upload/storage/v1/b/test-bucket/o" {
+		t.Fatalf("unexpected upload path: %s", requestPath)
+	}
+	if requestQuery.Get("uploadType") != "media" {
+		t.Fatalf("unexpected uploadType: %s", requestQuery.Get("uploadType"))
+	}
+	if result.Object != "audit-prefix/2026/06/04/fastapi-service/20260604T123000.123456789Z-success.json" {
+		t.Fatalf("unexpected object name: %s", result.Object)
+	}
+	if requestQuery.Get("name") != result.Object {
+		t.Fatalf("unexpected object query name: %s", requestQuery.Get("name"))
+	}
+	if requestAuth != "Bearer static-token" {
+		t.Fatalf("unexpected auth header: %s", requestAuth)
+	}
+	if !bytes.Contains(requestBody, []byte(`"namespace": "service-launchpad-prod"`)) {
+		t.Fatalf("expected namespace in audit payload, got %s", string(requestBody))
+	}
+	if !bytes.Contains(requestBody, []byte(`"deployer": "client-go"`)) {
+		t.Fatalf("expected deployer in audit payload, got %s", string(requestBody))
+	}
+}
+
 type fakeDeployer struct {
 	result     applyResult
 	err        error
@@ -722,4 +908,23 @@ type fakeDeployer struct {
 func (f fakeDeployer) Apply(_ context.Context, bundle manifestBundle) (applyResult, error) {
 	f.lastBundle = bundle
 	return f.result, f.err
+}
+
+type fakeAuditRecorder struct {
+	result     auditResult
+	err        error
+	calls      int
+	lastRecord deploymentAuditRecord
+}
+
+func (f *fakeAuditRecorder) RecordDeployment(_ context.Context, record deploymentAuditRecord) (auditResult, error) {
+	f.calls++
+	f.lastRecord = record
+	return f.result, f.err
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) {
+	return f(r)
 }
