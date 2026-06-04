@@ -143,6 +143,22 @@ Grafana dashboards show:
 - FastAPI service request rate, latency, errors, SLOs, and replica behavior.
 - Control-plane scrape health, managed service count, registrations, deployments, and deployment duration.
 - k6 load-test traffic and failure behavior.
+
+The `Control Plane Observability` dashboard is a local Minikube dashboard. It reads metrics collected by in-cluster `vmagent` from the developer-host control plane through `host.minikube.internal:8080`. It should not be read as production Cloud Run telemetry.
+
+For Cloud Run, the control-plane binary keeps the same operational endpoints:
+
+- `GET /health` for Cloud Run liveness checks and direct operator checks.
+- `GET /ready` for Cloud Run startup checks and target/runtime status.
+- `GET /metrics` for Prometheus text-format metrics.
+
+The production baseline does not depend on durable pull scraping of Cloud Run `/metrics`. Cloud Run instances are ephemeral, can scale to zero, and may be protected by IAM or internal ingress, so a scraper can miss process-local counters or fail to reach an instance at all. The intended production observability stack is self-hosted LGTM in `GKE production`, similar to the local Minikube stack, with GCP observability features used as integration points rather than replacements. The minimal first production approach is:
+
+- keep `/metrics` for local development and authenticated ad hoc inspection
+- rely on Cloud Logging as the first capture point for Cloud Run request logs and control-plane application logs
+- route Cloud Run logs from Cloud Logging to Pub/Sub, then into Loki through a small GKE subscriber or collector when production log unification is required
+- run the LGTM stack in `GKE production` for workload metrics, logs, traces, dashboards, and production observability ownership
+- add a later OTLP exporter, sidecar/exporter, pushgateway, or remote-write path for durable Cloud Run control-plane metrics and traces
 - VictoriaMetrics vs Mimir storage comparison.
 
 Logs flow from pods through Promtail into Loki. Traces flow from `fastapi-service` into Tempo.

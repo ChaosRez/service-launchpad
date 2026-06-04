@@ -53,6 +53,10 @@ kubectl port-forward svc/loki 3100:3100 -n service-launchpad-observability
   - `k6 Load Testing` for generator request rate, duration, failure rate, and VUs
   - `Metrics Storage Comparison` for side-by-side local vs long-term store queries
 - Grafana provisions the dashboard into the `Service Launchpad` folder on startup
+- The `Control Plane Observability` dashboard is scoped to local Minikube. Its control-plane panels depend on `vmagent` scraping `host.minikube.internal:8080/metrics`; they do not represent Cloud Run production metrics.
+- Production should run the same LGTM-style stack in `GKE production`, not on the developer machine. For the Cloud Run control plane, keep `/metrics` for authenticated ad hoc inspection and use Cloud Logging as the first log capture point.
+- To make Cloud Run logs visible in self-hosted Grafana/Loki, add a Cloud Logging sink to Pub/Sub and run a GKE subscriber or collector that writes those log entries to Loki.
+- Add OTLP, sidecar/exporter, pushgateway, or remote-write integration before treating Cloud Run control-plane metrics and traces as durable production dashboard data.
 - `VictoriaMetrics` stores Prometheus-format metrics, but it does not support exemplar-backed jump-to-trace navigation the same way Prometheus/Mimir do. Use Grafana Explore with the `Tempo` datasource or configure Grafana correlations to move from metrics toward traces.
 - `k6` is used inside the cluster and sends `k6_*` metrics to `vmagent` via Prometheus remote write at `http://vmagent.service-launchpad-observability.svc.cluster.local:8429/api/v1/write`
 - `vmagent` then replicates those samples to both `VictoriaMetrics` and `Mimir`, which is the Task 11b local-vs-global storage path

@@ -169,3 +169,12 @@ The local monitoring stack keeps the control plane outside Kubernetes for now an
 ```text
 host.minikube.internal:8080
 ```
+
+Cloud Run keeps the same endpoints, but the production observability model is different:
+
+- Cloud Run startup checks use `/ready`
+- Cloud Run liveness checks use `/health`
+- `/metrics` stays available for authenticated ad hoc inspection
+- stdout, stderr, and request logs are the baseline production signal through Cloud Logging
+
+Do not treat Cloud Run `/metrics` as durable production telemetry. Cloud Run instances are ephemeral, can scale to zero, and may be reachable only through IAM or internal ingress, so pull-based scraping is less reliable than the local Minikube scrape path. Add OTLP export, a sidecar/exporter, pushgateway, or remote-write path later if production control-plane metrics need retention and dashboards.
