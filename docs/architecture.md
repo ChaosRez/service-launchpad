@@ -304,6 +304,8 @@ The target model deliberately leaves these out of the current task:
 
 ## GKE Network Boundaries
 
+Detailed production network and access decisions are tracked in [Production Network and Access Design](production-network-access.md).
+
 The planned production GKE architecture should keep the same logical components but add cloud network boundaries:
 
 - A dedicated VPC for the project or environment.
