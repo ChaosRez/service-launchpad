@@ -77,7 +77,8 @@ docker build -t "${IMAGE}" services/fastapi-service
 echo "==> Starting control plane on ${CONTROL_PLANE_ADDR}"
 CONTROL_PLANE_LISTEN_ADDR="${CONTROL_PLANE_ADDR}" \
 CONTROL_PLANE_STORE_PATH="${STORE_PATH}" \
-CONTROL_PLANE_KUBECTL_CONTEXT="${PROFILE}" \
+CONTROL_PLANE_DEPLOYER_MODE="client-go" \
+CONTROL_PLANE_KUBE_CONTEXT="${PROFILE}" \
 go run ./services/control-plane >"${CONTROL_PLANE_LOG}" 2>&1 &
 CONTROL_PLANE_PID=$!
 
@@ -113,6 +114,11 @@ assert_contains "${manifest_response}" "\"hpa\""
 echo "==> Deploying through the control plane"
 deploy_response="$(curl -fsS -X POST "${CONTROL_PLANE_URL}/services/${SERVICE_NAME}/deploy")"
 assert_contains "${deploy_response}" "\"status\":\"applied\""
+assert_contains "${deploy_response}" "\"deployer\":\"client-go\""
+assert_contains "${deploy_response}" "\"Namespace/${NAMESPACE}\""
+assert_contains "${deploy_response}" "\"Deployment/${SERVICE_NAME}\""
+assert_contains "${deploy_response}" "\"Service/${SERVICE_NAME}\""
+assert_contains "${deploy_response}" "\"HorizontalPodAutoscaler/${SERVICE_NAME}\""
 
 echo "==> Waiting for Kubernetes rollout"
 kubectl rollout status deployment/"${SERVICE_NAME}" -n "${NAMESPACE}" --timeout=180s

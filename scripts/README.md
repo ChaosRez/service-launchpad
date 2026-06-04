@@ -22,9 +22,12 @@ The script:
 - points Docker at Minikube's daemon
 - builds `service-launchpad/fastapi-service:dev`
 - starts the control plane locally with a temporary JSON store
+- sets `CONTROL_PLANE_DEPLOYER_MODE=client-go`
+- points `CONTROL_PLANE_KUBE_CONTEXT` at the Minikube profile
 - registers `fastapi-service`
 - validates the rendered manifests
 - deploys through `POST /services/fastapi-service/deploy`
+- asserts the deploy response reports `"deployer":"client-go"` and the expected applied resources
 - waits for rollout and verifies the service endpoints
 
 Current prerequisite: the referenced image must already be available to the cluster. The smoke test handles that automatically for local Minikube by building the image into Minikube's Docker daemon first.
