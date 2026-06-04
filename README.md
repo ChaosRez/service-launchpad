@@ -49,6 +49,7 @@ The intended environment progression is:
 - local `Minikube` for development and validation of the shared `client-go` deployer
 - `production` for the required Cloud Run + `GKE` path
 - `staging` as a future TODO
+
 The current cloud foundation includes the external Cloud Run control-plane shape, authenticated Cloud Run invocation model, custom VPC, service account, Artifact Registry repository, GCS artifact bucket, and a deliberately disabled `GKE` module stub. Actual production `GKE` provisioning and end-to-end Cloud Run-to-GKE validation are the next major runtime milestones.
 
 ## Tech Stack
@@ -80,17 +81,18 @@ Implemented so far:
 - control-plane metrics, health, and readiness endpoints
 - shared deployer abstraction with `client-go`, `kubectl`, and disabled modes
 - Terraform `dev` foundation for custom VPC, IAM, GCS, Artifact Registry, Cloud Run, and a disabled `GKE` module boundary
+- explicit `prod` and future `staging` environment boundaries under `infra/terraform/environments`
 - authenticated Cloud Run API access model for production clients
 - baseline GitHub Actions CI for the repository
 
 Planned next milestones:
 
-1. Preserve and document production control-plane observability from Cloud Run
-2. Connect the control plane to a small cloud resource path such as GCS audit/config artifacts
-3. Validate the `client-go` deployer against Minikube
-4. Provision and deploy to `GKE production`
-5. Publish production images through Artifact Registry
-6. Validate service registration and deployment through the Cloud Run control plane
+1. Validate the `client-go` deployer against Minikube
+2. Write the production network and access design note
+3. Provision and deploy to `GKE production`
+4. Publish production images through Artifact Registry
+5. Validate service registration and deployment through the Cloud Run control plane
+6. Route Cloud Run deployment events into production Loki
 7. Write observability cost-analysis and telemetry strategy documentation
 8. Add more demo material: API flow, Kubernetes resource views, load-test runbook, and autoscaling screenshots
 

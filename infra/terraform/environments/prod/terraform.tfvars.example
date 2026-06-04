@@ -1,0 +1,47 @@
+project_id  = "production-gcp-project-id"
+region      = "europe-west10"
+zone        = "europe-west10-a"
+name_prefix = "service-launchpad"
+
+labels = {
+  owner       = "platform"
+  environment = "prod"
+}
+
+# Production network shape. Final variable names are defined when the prod
+# Terraform root is implemented.
+subnet_ip_cidr_range = "10.30.0.0/24"
+secondary_ip_ranges = [
+  {
+    range_name    = "pods"
+    ip_cidr_range = "10.40.0.0/20"
+  },
+  {
+    range_name    = "services"
+    ip_cidr_range = "10.41.0.0/24"
+  },
+]
+
+# Production Cloud Run control-plane shape.
+control_plane_service_account_id = "slp-prod-control-plane"
+control_plane_target_namespace   = "service-launchpad-prod"
+control_plane_container_image    = "europe-west10-docker.pkg.dev/production-gcp-project-id/service-launchpad/control-plane:prod"
+control_plane_ingress            = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
+control_plane_enable_vpc_egress  = true
+control_plane_min_instances      = 1
+control_plane_max_instances      = 3
+control_plane_deletion_protection = true
+
+# Production GKE API connection. Choose public vs private endpoint explicitly
+# in the production network design before filling these in.
+control_plane_kube_api_server = "https://<production-gke-api-endpoint>"
+control_plane_kube_ca_data    = "<base64-encoded-production-cluster-ca>"
+
+# Don't use allUsers or allAuthenticatedUsers.
+control_plane_invoker_members = [
+  "group:platform-operators@example.com",
+]
+
+# Production artifact bucket. The final bucket name must be globally unique.
+artifact_bucket_name          = "production-service-launchpad-artifacts"
+artifact_bucket_force_destroy = false
