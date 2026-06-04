@@ -64,6 +64,12 @@ wait_for_http() {
   exit 1
 }
 
+http_available() {
+  local url="$1"
+
+  curl -fsS "${url}" >/dev/null 2>&1
+}
+
 assert_contains() {
   local response="$1"
   local expected="$2"
@@ -147,6 +153,12 @@ else
 
   echo "==> Building fastapi-service image"
   docker build -t "${IMAGE}" services/fastapi-service
+fi
+
+if http_available "${CONTROL_PLANE_URL}/health"; then
+  echo "Control plane already responds at ${CONTROL_PLANE_URL}/health" >&2
+  echo "Use a different --control-plane-port, or stop the existing process before running this smoke test." >&2
+  exit 1
 fi
 
 echo "==> Starting control plane on ${CONTROL_PLANE_ADDR}"
