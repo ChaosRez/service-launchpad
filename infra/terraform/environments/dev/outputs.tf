@@ -59,12 +59,12 @@ output "control_plane_service_account_email" {
 }
 
 output "gke_cluster_module_status" {
-  description = "Status of the deferred GKE module stub."
+  description = "Status of the shared GKE module in the dev root."
   value       = module.gke_cluster.implementation_status
 }
 
 output "gke_cluster_planned_name" {
-  description = "Planned name for the future dev GKE cluster."
+  description = "Name reserved for a dev GKE cluster if dev ever enables the shared module."
   value       = module.gke_cluster.cluster_name
 }
 

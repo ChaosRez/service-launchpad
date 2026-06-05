@@ -8,8 +8,7 @@ labels = {
   environment = "prod"
 }
 
-# Production network shape. Final variable names are defined when the prod
-# Terraform root is implemented.
+a# Production network shape.
 subnet_ip_cidr_range = "10.30.0.0/24"
 secondary_ip_ranges = [
   {
@@ -22,26 +21,41 @@ secondary_ip_ranges = [
   },
 ]
 
-# Production Cloud Run control-plane shape.
+# Production identities.
 control_plane_service_account_id = "slp-prod-control-plane"
-control_plane_target_namespace   = "service-launchpad-prod"
-control_plane_container_image    = "europe-west10-docker.pkg.dev/production-gcp-project-id/service-launchpad/control-plane:prod"
-control_plane_ingress            = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
-control_plane_enable_vpc_egress  = true
-control_plane_min_instances      = 1
-control_plane_max_instances      = 3
-control_plane_deletion_protection = true
+gke_node_service_account_id = "slp-prod-gke-node"
 
-# Production GKE API connection. Choose public vs private endpoint explicitly
-# in the production network design before filling these in.
-control_plane_kube_api_server = "https://<production-gke-api-endpoint>"
-control_plane_kube_ca_data    = "<base64-encoded-production-cluster-ca>"
+# Production GKE shape.
+gke_cluster_enabled         = true
+gke_cluster_name            = "service-launchpad-prod-gke"
+gke_deletion_protection     = false
+gke_enable_private_nodes    = true
+gke_enable_private_endpoint = true
+gke_master_ipv4_cidr_block  = "172.16.0.0/28"
+gke_release_channel         = "REGULAR"
+gke_node_locations          = ["europe-west10-a"]
+gke_node_count              = 1
+gke_node_machine_type       = "e2-standard-2"
+gke_node_disk_size_gb       = 50
 
-# Don't use allUsers or allAuthenticatedUsers.
-control_plane_invoker_members = [
-  "group:platform-operators@example.com",
+# Required if gke_enable_private_endpoint = false. Use the operator/VPN/NAT
+# egress CIDRs that should be allowed to reach the GKE Kubernetes API.
+gke_master_authorized_networks = [
+  # {
+  #   cidr_block   = "203.0.113.10/32"
+  #   display_name = "platform-operator"
+  # },
 ]
 
 # Production artifact bucket. The final bucket name must be globally unique.
 artifact_bucket_name          = "production-service-launchpad-artifacts"
 artifact_bucket_force_destroy = false
+
+# Future Task 32 Cloud Run control-plane settings will add variables such as:
+# control_plane_target_namespace
+# control_plane_container_image
+# control_plane_ingress
+# control_plane_enable_vpc_egress
+# control_plane_invoker_members
+# control_plane_kube_api_server
+# control_plane_kube_ca_data

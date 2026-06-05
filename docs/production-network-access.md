@@ -57,7 +57,7 @@ For a lower-friction demo, a public GKE endpoint is acceptable only if it is int
 
 Decision for the first production implementation:
 
-- default design: private endpoint if the Terraform/GKE setup remains manageable
+- default design: private nodes and private GKE API endpoint
 - acceptable demo fallback: public endpoint with explicit authorized access and documented tradeoff
 - never acceptable: broad public Kubernetes API access without a written justification
 
@@ -166,14 +166,14 @@ Later hardening can add:
 
 These are not required for the first production demo, but the custom VPC and explicit ingress/egress choices leave room for them.
 
-## Open Decisions for Task 29
+## Open Decisions
 
-Task 29 should turn this note into Terraform. Before implementation, decide:
+Task 29 turned the first GKE foundation into Terraform with a private endpoint default. Remaining decisions for later production tasks:
 
-- private or public GKE Kubernetes API endpoint for the first production demo
-- exact production CIDR ranges
+- whether the first live demo keeps the private endpoint or temporarily uses the public endpoint fallback with authorized networks
+- how operators and CI reach the private Kubernetes API for Task 31 manifest deployment: VPN, Cloud Workstations, bastion VM, or private runner inside the production VPC
+- how trusted operators reach production Grafana remotely: VPN, Cloud Workstations, bastion tunnel, or internal HTTPS load balancer with Identity-Aware Proxy
 - Cloud Run ingress enum
 - Cloud Run VPC egress mode
-- GKE cluster size and node pool shape
 - whether Grafana needs an Internal Load Balancer immediately
 - initial Cloud Run invoker members

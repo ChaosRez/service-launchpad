@@ -143,7 +143,7 @@ variable "artifact_registry_repository_id" {
 }
 
 variable "gke_cluster_stub_enabled" {
-  description = "Reserved switch for the deferred GKE module. Must remain false until the real cluster module is implemented."
+  description = "Whether the shared GKE module should create a dev cluster. Keep false; local Minikube remains the dev Kubernetes runtime."
   type        = bool
   default     = false
 }

@@ -10,4 +10,5 @@ module "gke_cluster" {
   subnet_self_link              = google_compute_subnetwork.dev.self_link
   pods_secondary_range_name     = "pods"
   services_secondary_range_name = "services"
+  node_service_account_email    = google_service_account.control_plane.email
 }

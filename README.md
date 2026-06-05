@@ -50,7 +50,7 @@ The intended environment progression is:
 - `production` for the required Cloud Run + `GKE` path
 - `staging` as a future TODO
 
-The current cloud foundation includes the external Cloud Run control-plane shape, authenticated Cloud Run invocation model, custom VPC, service account, Artifact Registry repository, GCS artifact bucket, and a deliberately disabled `GKE` module stub. Actual production `GKE` provisioning and end-to-end Cloud Run-to-GKE validation are the next major runtime milestones.
+The current cloud foundation includes the external Cloud Run control-plane shape, authenticated Cloud Run invocation model, custom VPC, service account, Artifact Registry repository, GCS artifact bucket, a disabled dev GKE module boundary, and an applyable production GKE foundation. End-to-end Cloud Run-to-GKE validation remains a later runtime milestone.
 
 ## Tech Stack
 
@@ -81,6 +81,7 @@ Implemented so far:
 - control-plane metrics, health, and readiness endpoints
 - shared deployer abstraction with `client-go`, `kubectl`, and disabled modes
 - Terraform `dev` foundation for custom VPC, IAM, GCS, Artifact Registry, Cloud Run, and a disabled `GKE` module boundary
+- Terraform `prod` foundation for custom VPC, IAM, GCS, Artifact Registry, and a minimal standard GKE cluster
 - explicit `prod` and future `staging` environment boundaries under `infra/terraform/environments`
 - authenticated Cloud Run API access model for production clients
 - baseline GitHub Actions CI for the repository
@@ -89,12 +90,13 @@ Planned next milestones:
 
 1. Validate the `client-go` deployer against Minikube
 2. Write the production network and access design note
-3. Provision and deploy to `GKE production`
-4. Publish production images through Artifact Registry
-5. Validate service registration and deployment through the Cloud Run control plane
-6. Route Cloud Run deployment events into production Loki
-7. Write observability cost-analysis and telemetry strategy documentation
-8. Add more demo material: API flow, Kubernetes resource views, load-test runbook, and autoscaling screenshots
+3. Publish production images through Artifact Registry
+4. Deploy the production observability and workload stack to GKE
+5. Deploy the production control plane to Cloud Run
+6. Validate service registration and deployment through the Cloud Run control plane
+7. Route Cloud Run deployment events into production Loki
+8. Write observability cost-analysis and telemetry strategy documentation
+9. Add more demo material: API flow, Kubernetes resource views, load-test runbook, and autoscaling screenshots
 
 ## Monitoring Stack
 
@@ -157,3 +159,10 @@ The FastAPI dashboard shows workload availability, latency SLI, P95 latency, req
 
 The Tempo view shows trace drilldown for the `POST /v1/chat/completions` workload path, including span timing, service metadata, runtime profile attributes, and OpenTelemetry resource attributes. This connects the service dashboard metrics to request-level debugging.
 
+Planned screenshot additions:
+
+- service registration flow
+- Kubernetes deployment view
+- VictoriaMetrics targets
+- autoscaling demonstration under load
+- Loki log query view
