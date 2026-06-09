@@ -17,9 +17,14 @@ type apiServer struct {
 	deployer  manifestDeployer
 	metrics   *controlPlaneMetrics
 	audit     auditRecorder
+	policy    deploymentPolicy
 }
 
 func newAPIServer(store *serviceStore, namespace string, deployer manifestDeployer, auditRecorders ...auditRecorder) *apiServer {
+	return newAPIServerWithPolicy(store, namespace, deployer, defaultDeploymentPolicy(), auditRecorders...)
+}
+
+func newAPIServerWithPolicy(store *serviceStore, namespace string, deployer manifestDeployer, policy deploymentPolicy, auditRecorders ...auditRecorder) *apiServer {
 	var audit auditRecorder
 	if len(auditRecorders) > 0 {
 		audit = auditRecorders[0]
@@ -31,6 +36,7 @@ func newAPIServer(store *serviceStore, namespace string, deployer manifestDeploy
 		deployer:  deployer,
 		metrics:   newControlPlaneMetrics(store),
 		audit:     audit,
+		policy:    policy,
 	}
 }
 
@@ -76,8 +82,9 @@ func (a *apiServer) handleServices(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if err := validateServiceDefinition(def); err != nil {
+		if err := a.policy.validateServiceDefinition(def); err != nil {
 			a.metrics.recordServiceRegistration("failure")
+			log.Printf("deployment policy rejected service registration %q: %v", def.Name, err)
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
@@ -158,6 +165,15 @@ func (a *apiServer) handleServiceDeploy(w http.ResponseWriter, r *http.Request, 
 	}
 
 	bundle := renderManifestBundle(service, a.namespace)
+	if err := a.policy.validateServiceDefinition(service); err != nil {
+		a.handleDeploymentPolicyFailure(w, r, service, bundle, err)
+		return
+	}
+	if err := a.policy.validateManifestBundle(bundle); err != nil {
+		a.handleDeploymentPolicyFailure(w, r, service, bundle, err)
+		return
+	}
+
 	start := time.Now()
 	result, err := a.deployer.Apply(r.Context(), bundle)
 	duration := time.Since(start)
@@ -193,6 +209,23 @@ func (a *apiServer) handleServiceDeploy(w http.ResponseWriter, r *http.Request, 
 		response["audit"] = auditResult
 	}
 	writeJSON(w, http.StatusOK, response)
+}
+
+func (a *apiServer) handleDeploymentPolicyFailure(w http.ResponseWriter, r *http.Request, service serviceDefinition, bundle manifestBundle, err error) {
+	a.metrics.recordDeployment("failure", 0)
+	log.Printf("deployment policy rejected deploy for %s in namespace %s: %v", service.Name, a.namespace, err)
+	response := map[string]any{
+		"error":     "deployment policy rejected request",
+		"service":   service.Name,
+		"namespace": a.namespace,
+		"details":   err.Error(),
+	}
+	if auditResult, auditErr := a.recordDeploymentAudit(r.Context(), service, bundle, applyResult{}, "failure", 0, err); auditErr != nil {
+		log.Printf("failed to write deployment policy audit record for %s: %v", service.Name, auditErr)
+	} else if auditResult.Object != "" {
+		response["audit"] = auditResult
+	}
+	writeJSON(w, http.StatusBadRequest, response)
 }
 
 func (a *apiServer) recordDeploymentAudit(ctx context.Context, service serviceDefinition, bundle manifestBundle, result applyResult, status string, duration time.Duration, deployErr error) (auditResult, error) {

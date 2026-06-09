@@ -358,6 +358,184 @@ func TestClientGoResourceIntentWithoutAutoscaling(t *testing.T) {
 	}
 }
 
+func TestDeploymentPolicyValidatesRenderedManifestBundle(t *testing.T) {
+	policy := defaultDeploymentPolicy()
+	def := serviceDefinition{
+		Name:     "fastapi-service",
+		Image:    "service-launchpad/fastapi-service:dev",
+		Port:     8000,
+		Replicas: 1,
+		Autoscaling: autoscalingConfig{
+			Enabled:              true,
+			MinReplicas:          1,
+			MaxReplicas:          5,
+			TargetCPUUtilization: 60,
+		},
+	}
+
+	bundle := renderManifestBundle(def, defaultNamespace)
+	if err := policy.validateManifestBundle(bundle); err != nil {
+		t.Fatalf("expected rendered bundle to pass policy, got %v", err)
+	}
+}
+
+func TestDeploymentPolicyRejectsUnsafeManifestShapes(t *testing.T) {
+	policy := defaultDeploymentPolicy()
+	def := serviceDefinition{
+		Name:     "fastapi-service",
+		Image:    "service-launchpad/fastapi-service:dev",
+		Port:     8000,
+		Replicas: 1,
+		Autoscaling: autoscalingConfig{
+			Enabled:              true,
+			MinReplicas:          1,
+			MaxReplicas:          5,
+			TargetCPUUtilization: 60,
+		},
+	}
+
+	tests := []struct {
+		name   string
+		mutate func(*manifestBundle)
+		want   string
+	}{
+		{
+			name: "deployment outside managed namespace",
+			mutate: func(bundle *manifestBundle) {
+				metadata := bundle.Deployment["metadata"].(map[string]any)
+				metadata["namespace"] = "default"
+			},
+			want: "managed namespace",
+		},
+		{
+			name: "service type load balancer",
+			mutate: func(bundle *manifestBundle) {
+				spec := bundle.Service["spec"].(map[string]any)
+				spec["type"] = "LoadBalancer"
+			},
+			want: "ClusterIP",
+		},
+		{
+			name: "missing readiness probe",
+			mutate: func(bundle *manifestBundle) {
+				container := firstRenderedContainer(t, bundle)
+				delete(container, "readinessProbe")
+			},
+			want: "readinessProbe",
+		},
+		{
+			name: "missing resource limits",
+			mutate: func(bundle *manifestBundle) {
+				container := firstRenderedContainer(t, bundle)
+				resources := container["resources"].(map[string]any)
+				delete(resources, "limits")
+			},
+			want: "resource limits",
+		},
+		{
+			name: "excessive resource limit",
+			mutate: func(bundle *manifestBundle) {
+				container := firstRenderedContainer(t, bundle)
+				resources := container["resources"].(map[string]any)
+				limits := resources["limits"].(map[string]any)
+				limits["memory"] = "2Gi"
+			},
+			want: "resource limits",
+		},
+		{
+			name: "privileged container",
+			mutate: func(bundle *manifestBundle) {
+				container := firstRenderedContainer(t, bundle)
+				container["securityContext"] = map[string]any{
+					"privileged": true,
+				}
+			},
+			want: "privileged",
+		},
+		{
+			name: "host network",
+			mutate: func(bundle *manifestBundle) {
+				templateSpec := renderedTemplateSpec(t, bundle)
+				templateSpec["hostNetwork"] = true
+			},
+			want: "hostNetwork",
+		},
+		{
+			name: "host path volume",
+			mutate: func(bundle *manifestBundle) {
+				templateSpec := renderedTemplateSpec(t, bundle)
+				templateSpec["volumes"] = []any{
+					map[string]any{
+						"name": "host",
+						"hostPath": map[string]any{
+							"path": "/var/run/docker.sock",
+						},
+					},
+				}
+			},
+			want: "hostPath",
+		},
+		{
+			name: "arbitrary service account",
+			mutate: func(bundle *manifestBundle) {
+				templateSpec := renderedTemplateSpec(t, bundle)
+				templateSpec["serviceAccountName"] = "cluster-admin"
+			},
+			want: "service account",
+		},
+		{
+			name: "bad ownership label",
+			mutate: func(bundle *manifestBundle) {
+				metadata := bundle.Deployment["metadata"].(map[string]any)
+				labels := metadata["labels"].(map[string]any)
+				labels["app.kubernetes.io/part-of"] = "other-system"
+			},
+			want: "part-of",
+		},
+		{
+			name: "arbitrary annotation",
+			mutate: func(bundle *manifestBundle) {
+				metadata := bundle.Deployment["metadata"].(map[string]any)
+				metadata["annotations"] = map[string]any{
+					"container.apparmor.security.beta.kubernetes.io/fastapi-service": "unconfined",
+				}
+			},
+			want: "service-launchpad.io",
+		},
+		{
+			name: "yaml drift",
+			mutate: func(bundle *manifestBundle) {
+				bundle.YAML += "\n---\napiVersion: v1\nkind: Secret\nmetadata:\n  name: unexpected\n"
+			},
+			want: "structured resource intent",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			base := renderManifestBundle(def, defaultNamespace)
+			bundle := manifestBundle{
+				Namespace:         base.Namespace,
+				NamespaceManifest: cloneManifest(base.NamespaceManifest),
+				ConfigMap:         cloneManifest(base.ConfigMap),
+				Deployment:        cloneManifest(base.Deployment),
+				Service:           cloneManifest(base.Service),
+				HPA:               cloneManifest(base.HPA),
+				YAML:              base.YAML,
+			}
+			tc.mutate(&bundle)
+
+			err := policy.validateManifestBundle(bundle)
+			if err == nil {
+				t.Fatalf("expected policy error")
+			}
+			if !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("expected error to contain %q, got %v", tc.want, err)
+			}
+		})
+	}
+}
+
 func TestNewManifestDeployerFromConfigSelectsKubectl(t *testing.T) {
 	deployer, err := newManifestDeployerFromConfig(controlPlaneConfig{
 		DeployerMode:  "kubectl",
@@ -419,7 +597,10 @@ func TestLoadControlPlaneConfigReadsEnvironment(t *testing.T) {
 	t.Setenv(envGCSEndpoint, "http://storage.example.test")
 	t.Setenv(envGCSBearerToken, "test-gcs-token")
 
-	cfg := loadControlPlaneConfig()
+	cfg, err := loadControlPlaneConfig()
+	if err != nil {
+		t.Fatalf("loadControlPlaneConfig returned error: %v", err)
+	}
 
 	if cfg.ListenAddr != "127.0.0.1:9090" {
 		t.Fatalf("unexpected listen addr: %s", cfg.ListenAddr)
@@ -450,6 +631,125 @@ func TestLoadControlPlaneConfigReadsEnvironment(t *testing.T) {
 	}
 	if cfg.GCSBearerToken != "test-gcs-token" {
 		t.Fatalf("unexpected GCS bearer token: %s", cfg.GCSBearerToken)
+	}
+	if !reflect.DeepEqual(cfg.DeploymentPolicy.AllowedImagePrefixes, []string{defaultAllowedImagePrefix}) {
+		t.Fatalf("unexpected default image prefixes: %#v", cfg.DeploymentPolicy.AllowedImagePrefixes)
+	}
+}
+
+func TestLoadControlPlaneConfigReadsDeploymentPolicyEnvironment(t *testing.T) {
+	t.Setenv(envAllowedImagePrefixes, "europe-west10-docker.pkg.dev/geofaas-411316/service-launchpad/,service-launchpad/")
+	t.Setenv(envMaxReplicas, "4")
+	t.Setenv(envMaxAutoscalingReplicas, "6")
+
+	cfg, err := loadControlPlaneConfig()
+	if err != nil {
+		t.Fatalf("loadControlPlaneConfig returned error: %v", err)
+	}
+
+	wantPrefixes := []string{
+		"europe-west10-docker.pkg.dev/geofaas-411316/service-launchpad/",
+		"service-launchpad/",
+	}
+	if !reflect.DeepEqual(cfg.DeploymentPolicy.AllowedImagePrefixes, wantPrefixes) {
+		t.Fatalf("unexpected image prefixes:\nwant: %#v\n got: %#v", wantPrefixes, cfg.DeploymentPolicy.AllowedImagePrefixes)
+	}
+	if cfg.DeploymentPolicy.MaxReplicas != 4 {
+		t.Fatalf("unexpected max replicas: %d", cfg.DeploymentPolicy.MaxReplicas)
+	}
+	if cfg.DeploymentPolicy.MaxAutoscalingReplicas != 6 {
+		t.Fatalf("unexpected max autoscaling replicas: %d", cfg.DeploymentPolicy.MaxAutoscalingReplicas)
+	}
+}
+
+func TestDeploymentPolicyValidatesServiceDefinitions(t *testing.T) {
+	policy := defaultDeploymentPolicy()
+
+	valid := serviceDefinition{
+		Name:     "fastapi-service",
+		Image:    "service-launchpad/fastapi-service:dev",
+		Port:     8000,
+		Replicas: 1,
+		Autoscaling: autoscalingConfig{
+			Enabled:              true,
+			MinReplicas:          1,
+			MaxReplicas:          5,
+			TargetCPUUtilization: 60,
+		},
+	}
+	if err := policy.validateServiceDefinition(valid); err != nil {
+		t.Fatalf("expected valid definition to pass policy, got %v", err)
+	}
+
+	tests := []struct {
+		name string
+		def  serviceDefinition
+		want string
+	}{
+		{
+			name: "image outside allowed prefix",
+			def: serviceDefinition{
+				Name:     "fastapi-service",
+				Image:    "nginx:latest",
+				Port:     8000,
+				Replicas: 1,
+			},
+			want: "allowed prefixes",
+		},
+		{
+			name: "replicas above policy bound",
+			def: serviceDefinition{
+				Name:     "fastapi-service",
+				Image:    "service-launchpad/fastapi-service:dev",
+				Port:     8000,
+				Replicas: defaultMaxReplicas + 1,
+			},
+			want: "replicas must be less than or equal",
+		},
+		{
+			name: "autoscaling above policy bound",
+			def: serviceDefinition{
+				Name:     "fastapi-service",
+				Image:    "service-launchpad/fastapi-service:dev",
+				Port:     8000,
+				Replicas: 1,
+				Autoscaling: autoscalingConfig{
+					Enabled:              true,
+					MinReplicas:          1,
+					MaxReplicas:          defaultMaxAutoscalingReplicas + 1,
+					TargetCPUUtilization: 60,
+				},
+			},
+			want: "autoscaling.maxReplicas",
+		},
+		{
+			name: "cpu target above policy bound",
+			def: serviceDefinition{
+				Name:     "fastapi-service",
+				Image:    "service-launchpad/fastapi-service:dev",
+				Port:     8000,
+				Replicas: 1,
+				Autoscaling: autoscalingConfig{
+					Enabled:              true,
+					MinReplicas:          1,
+					MaxReplicas:          3,
+					TargetCPUUtilization: defaultMaxCPUUtilizationTarget + 1,
+				},
+			},
+			want: "targetCpuUtilization",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := policy.validateServiceDefinition(tc.def)
+			if err == nil {
+				t.Fatalf("expected policy error")
+			}
+			if !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("expected error to contain %q, got %v", tc.want, err)
+			}
+		})
 	}
 }
 
@@ -652,6 +952,77 @@ func TestHandleServiceDeployFailureWritesAuditRecord(t *testing.T) {
 		t.Fatalf("unexpected audit status: %s", audit.lastRecord.Status)
 	}
 	if audit.lastRecord.Error != "kubectl apply failed" {
+		t.Fatalf("unexpected audit error: %s", audit.lastRecord.Error)
+	}
+}
+
+func TestHandleServiceRegistrationRejectsPolicyViolation(t *testing.T) {
+	store, err := newServiceStore("")
+	if err != nil {
+		t.Fatalf("newServiceStore returned error: %v", err)
+	}
+
+	server := newAPIServer(store, defaultNamespace, nil)
+	req := httptest.NewRequest(http.MethodPost, "/services", strings.NewReader(`{
+		"name": "fastapi-service",
+		"image": "docker.io/library/nginx:latest",
+		"port": 8000,
+		"replicas": 1
+	}`))
+	rec := httptest.NewRecorder()
+
+	server.routes().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "allowed prefixes") {
+		t.Fatalf("expected policy message, got %s", rec.Body.String())
+	}
+	if store.count() != 0 {
+		t.Fatalf("expected rejected service not to be stored")
+	}
+}
+
+func TestHandleServiceDeployRejectsPolicyViolationAndWritesAuditRecord(t *testing.T) {
+	store, err := newServiceStore("")
+	if err != nil {
+		t.Fatalf("newServiceStore returned error: %v", err)
+	}
+
+	service, err := store.create(serviceDefinition{
+		Name:     "fastapi-service",
+		Image:    "service-launchpad/fastapi-service:dev",
+		Port:     8000,
+		Replicas: 1,
+	})
+	if err != nil {
+		t.Fatalf("create returned error: %v", err)
+	}
+
+	policy := defaultDeploymentPolicy()
+	policy.AllowedImagePrefixes = []string{"europe-west10-docker.pkg.dev/geofaas-411316/service-launchpad/"}
+	audit := &fakeAuditRecorder{}
+	server := newAPIServerWithPolicy(store, defaultNamespace, fakeDeployer{}, policy, audit)
+
+	req := httptest.NewRequest(http.MethodPost, "/services/"+service.Name+"/deploy", nil)
+	rec := httptest.NewRecorder()
+
+	server.routes().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "deployment policy rejected request") {
+		t.Fatalf("expected policy rejection response, got %s", rec.Body.String())
+	}
+	if audit.calls != 1 {
+		t.Fatalf("expected one audit record, got %d", audit.calls)
+	}
+	if audit.lastRecord.Status != "failure" {
+		t.Fatalf("unexpected audit status: %s", audit.lastRecord.Status)
+	}
+	if !strings.Contains(audit.lastRecord.Error, "allowed prefixes") {
 		t.Fatalf("unexpected audit error: %s", audit.lastRecord.Error)
 	}
 }
@@ -921,6 +1292,63 @@ func (f *fakeAuditRecorder) RecordDeployment(_ context.Context, record deploymen
 	f.calls++
 	f.lastRecord = record
 	return f.result, f.err
+}
+
+func renderedTemplateSpec(t *testing.T, bundle *manifestBundle) map[string]any {
+	t.Helper()
+	spec, ok := bundle.Deployment["spec"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected deployment spec")
+	}
+	template, ok := spec["template"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected deployment template")
+	}
+	templateSpec, ok := template["spec"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected deployment template spec")
+	}
+	return templateSpec
+}
+
+func firstRenderedContainer(t *testing.T, bundle *manifestBundle) map[string]any {
+	t.Helper()
+	templateSpec := renderedTemplateSpec(t, bundle)
+	containers, ok := templateSpec["containers"].([]any)
+	if !ok || len(containers) == 0 {
+		t.Fatalf("expected deployment containers")
+	}
+	container, ok := containers[0].(map[string]any)
+	if !ok {
+		t.Fatalf("expected first container")
+	}
+	return container
+}
+
+func cloneManifest(manifest map[string]any) map[string]any {
+	if manifest == nil {
+		return nil
+	}
+	cloned := make(map[string]any, len(manifest))
+	for key, value := range manifest {
+		cloned[key] = cloneValue(value)
+	}
+	return cloned
+}
+
+func cloneValue(value any) any {
+	switch typed := value.(type) {
+	case map[string]any:
+		return cloneManifest(typed)
+	case []any:
+		cloned := make([]any, len(typed))
+		for i, item := range typed {
+			cloned[i] = cloneValue(item)
+		}
+		return cloned
+	default:
+		return value
+	}
 }
 
 type roundTripFunc func(*http.Request) (*http.Response, error)

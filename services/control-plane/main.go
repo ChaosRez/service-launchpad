@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -10,7 +11,10 @@ const defaultListenAddr = ":8080"
 const defaultNamespace = "service-launchpad-dev"
 
 func main() {
-	cfg := loadControlPlaneConfig()
+	cfg, err := loadControlPlaneConfig()
+	if err != nil {
+		log.Fatalf("control-plane config failed: %v", err)
+	}
 
 	store, err := newServiceStore(cfg.StorePath)
 	if err != nil {
@@ -25,7 +29,7 @@ func main() {
 
 	server := &http.Server{
 		Addr:              cfg.ListenAddr,
-		Handler:           newAPIServer(store, cfg.TargetNamespace, deployer, auditRecorder).routes(),
+		Handler:           newAPIServerWithPolicy(store, cfg.TargetNamespace, deployer, cfg.DeploymentPolicy, auditRecorder).routes(),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
@@ -45,6 +49,7 @@ func main() {
 		}
 		log.Printf("control-plane deployment audit enabled for gs://%s/%s", cfg.AuditBucket, prefix)
 	}
+	log.Printf("control-plane deployment policy image prefixes %s", strings.Join(cfg.DeploymentPolicy.AllowedImagePrefixes, ","))
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("control-plane server failed: %v", err)
 	}

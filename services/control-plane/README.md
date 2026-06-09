@@ -16,6 +16,7 @@ Current validation:
 - `port` must be between `1` and `65535`
 - `replicas` must be at least `1`
 - autoscaling settings are validated when autoscaling is enabled
+- deployment policy bounds replicas, autoscaling, image prefixes, and rendered Kubernetes resource intent before apply
 
 Implemented endpoints:
 

@@ -68,7 +68,7 @@ flowchart LR
 ## Request Flow
 
 1. A user submits a service definition to `POST /services`.
-2. The control plane validates required fields such as name, image, port, replicas, and autoscaling configuration.
+2. The control plane validates required fields plus deployment policy bounds such as allowed image prefixes, replica limits, autoscaling limits, and safe names.
 3. The service definition is stored in memory by default, with optional JSON file persistence.
 4. A user calls `POST /services/{name}/deploy`.
 5. The control plane renders Kubernetes resources:
@@ -77,9 +77,14 @@ flowchart LR
    - `Deployment`
    - `Service`
    - `HorizontalPodAutoscaler` when autoscaling is enabled
-6. The control plane applies those manifests with `kubectl apply -f -`.
-7. Kubernetes schedules the workload in `service-launchpad-dev`.
-8. `vmagent`, `kube-state-metrics`, and Grafana make the workload and deployment state observable.
+6. The control plane validates the rendered manifest intent before applying it:
+   - only expected resource kinds are allowed
+   - resources must stay in the configured managed namespace, except the namespace object itself
+   - services remain `ClusterIP`
+   - workload containers require probes, resource requests/limits, project labels, and non-privileged runtime shape
+7. The control plane applies those manifests with the shared `client-go` deployer path, with `kubectl` kept as a local fallback/debug option.
+8. Kubernetes schedules the workload in the configured target namespace.
+9. `vmagent`, `kube-state-metrics`, and Grafana make the workload and deployment state observable.
 
 ## Control Plane API Surface
 
@@ -363,9 +368,9 @@ High-priority follow-up:
 
 Intentional simplifications:
 
-- deployments are applied with `kubectl`, not `client-go`
+- deployments use the shared `client-go` path, with `kubectl` retained only as a local fallback/debug option
 - storage is in-memory or JSON file backed, not a database
-- generated manifests are simple and explicit
+- generated manifests are simple, explicit, and checked by the control-plane deployment policy before apply
 - no authn/authz yet on the local control-plane API; production Cloud Run access should be authenticated
 - no rollback strategy yet
 - no multi-environment release promotion yet
@@ -378,7 +383,7 @@ Current local security is intentionally lightweight. Before using this outside a
 - authorization around who can register or deploy services
 - tightly scoped Kubernetes permissions for the Cloud Run service account
 - audit logging for deployment actions
-- image provenance or admission controls
+- stronger image provenance or cluster-side admission controls after the deterministic control-plane policy layer
 - secret handling through Kubernetes `Secret` or an external secret manager
 - network policies between workload and observability namespaces
 

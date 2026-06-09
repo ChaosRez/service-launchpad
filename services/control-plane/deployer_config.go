@@ -30,19 +30,20 @@ const (
 )
 
 type controlPlaneConfig struct {
-	ListenAddr      string
-	StorePath       string
-	TargetNamespace string
-	DeployerMode    string
-	KubectlBinary   string
-	KubeContext     string
-	AuditBucket     string
-	AuditPrefix     string
-	GCSEndpoint     string
-	GCSBearerToken  string
+	ListenAddr       string
+	StorePath        string
+	TargetNamespace  string
+	DeployerMode     string
+	KubectlBinary    string
+	KubeContext      string
+	AuditBucket      string
+	AuditPrefix      string
+	GCSEndpoint      string
+	GCSBearerToken   string
+	DeploymentPolicy deploymentPolicy
 }
 
-func loadControlPlaneConfig() controlPlaneConfig {
+func loadControlPlaneConfig() (controlPlaneConfig, error) {
 	listenAddr := strings.TrimSpace(os.Getenv("CONTROL_PLANE_LISTEN_ADDR"))
 	if listenAddr == "" {
 		listenAddr = defaultListenAddr
@@ -63,18 +64,24 @@ func loadControlPlaneConfig() controlPlaneConfig {
 		kubeContext = strings.TrimSpace(os.Getenv("CONTROL_PLANE_KUBECTL_CONTEXT"))
 	}
 
-	return controlPlaneConfig{
-		ListenAddr:      listenAddr,
-		StorePath:       os.Getenv("CONTROL_PLANE_STORE_PATH"),
-		TargetNamespace: namespace,
-		DeployerMode:    mode,
-		KubectlBinary:   os.Getenv("CONTROL_PLANE_KUBECTL_BIN"),
-		KubeContext:     kubeContext,
-		AuditBucket:     strings.TrimSpace(os.Getenv(envAuditBucket)),
-		AuditPrefix:     strings.TrimSpace(os.Getenv(envAuditPrefix)),
-		GCSEndpoint:     strings.TrimSpace(os.Getenv(envGCSEndpoint)),
-		GCSBearerToken:  strings.TrimSpace(os.Getenv(envGCSBearerToken)),
+	policy, err := loadDeploymentPolicyFromEnv(os.Getenv)
+	if err != nil {
+		return controlPlaneConfig{}, err
 	}
+
+	return controlPlaneConfig{
+		ListenAddr:       listenAddr,
+		StorePath:        os.Getenv("CONTROL_PLANE_STORE_PATH"),
+		TargetNamespace:  namespace,
+		DeployerMode:     mode,
+		KubectlBinary:    os.Getenv("CONTROL_PLANE_KUBECTL_BIN"),
+		KubeContext:      kubeContext,
+		AuditBucket:      strings.TrimSpace(os.Getenv(envAuditBucket)),
+		AuditPrefix:      strings.TrimSpace(os.Getenv(envAuditPrefix)),
+		GCSEndpoint:      strings.TrimSpace(os.Getenv(envGCSEndpoint)),
+		GCSBearerToken:   strings.TrimSpace(os.Getenv(envGCSBearerToken)),
+		DeploymentPolicy: policy,
+	}, nil
 }
 
 func newManifestDeployerFromConfig(cfg controlPlaneConfig) (manifestDeployer, error) {
