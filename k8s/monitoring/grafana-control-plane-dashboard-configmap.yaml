@@ -70,7 +70,7 @@ data:
             "textMode": "auto",
             "wideLayout": true
           },
-          "pluginVersion": "11.1.0",
+          "pluginVersion": "13.0.2",
           "targets": [
             {
               "datasource": {
@@ -132,7 +132,7 @@ data:
             "textMode": "auto",
             "wideLayout": true
           },
-          "pluginVersion": "11.1.0",
+          "pluginVersion": "13.0.2",
           "targets": [
             {
               "datasource": {
