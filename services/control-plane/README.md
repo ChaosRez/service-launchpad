@@ -74,12 +74,44 @@ When `CONTROL_PLANE_STORE_PATH` is unset, the service stays in-memory only.
 
 Manifest rendering:
 
-- currently mirrors the sample inference-simulator shape from [`k8s/base`](k8s/base)
+- currently mirrors the sample inference-simulator shape from [`k8s/base`](../../k8s/base)
 - renders a standardized Kubernetes `ConfigMap` for `fastapi-service`
 - renders a standardized Kubernetes `Deployment`
 - renders a standardized Kubernetes `Service`
 - renders an `HorizontalPodAutoscaler` when autoscaling is enabled
 - includes the same labels, probes, resource defaults, and `envFrom` wiring used by the base manifests (`k8s/base`)
+
+Deployment policy:
+
+- incoming service definitions are validated before they are stored
+- rendered manifests are validated again before anything is applied to Kubernetes
+- fallback deployer YAML must match the structured resource intent used by the `client-go` path
+- allowed resource kinds are limited to `Namespace`, `ConfigMap`, `Deployment`, `Service`, and `HorizontalPodAutoscaler`
+- resources must stay in the configured managed namespace, except the namespace object itself
+- workload containers must keep probes plus CPU and memory requests/limits
+- services must remain `ClusterIP`
+- custom annotations must use the `service-launchpad.io/` prefix
+- privileged containers, host networking, host PID/IPC, hostPath volumes, added Linux capabilities, and arbitrary workload service accounts are rejected
+- policy rejections are logged, counted as failures, and included in deployment audit records when audit storage is configured
+
+Policy environment variables:
+
+```bash
+# comma-separated prefixes; defaults to service-launchpad/ for local Minikube images
+CONTROL_PLANE_ALLOWED_IMAGE_PREFIXES=service-launchpad/
+
+# defaults are intentionally small for the current demo platform
+CONTROL_PLANE_POLICY_MAX_REPLICAS=10
+CONTROL_PLANE_POLICY_MAX_AUTOSCALING_REPLICAS=10
+```
+
+For production, set `CONTROL_PLANE_ALLOWED_IMAGE_PREFIXES` to the Artifact Registry repository prefix, for example:
+
+```bash
+CONTROL_PLANE_ALLOWED_IMAGE_PREFIXES=europe-west10-docker.pkg.dev/geofaas-411316/service-launchpad/
+```
+
+Future cluster-side policy options such as Kubernetes admission policies, OPA Gatekeeper, or Kyverno remain out of scope for this first control-plane policy layer.
 
 Example manifest request:
 
