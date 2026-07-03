@@ -16,7 +16,7 @@ The project does not require a separate `GKE dev` cluster. Local development sho
 | Control plane runtime | Developer host, usually `127.0.0.1:8080` or `:8080` | Cloud Run | Cloud Run |
 | Workload runtime | Minikube | GKE | GKE |
 | Deployer path | `client-go` against local kubeconfig; `kubectl` fallback for debug | `client-go` against GKE API | Same as production |
-| Images | Minikube-local images are acceptable | Artifact Registry images only | Artifact Registry images only |
+| Images | Minikube-local images are acceptable | Artifact Registry images published by `scripts/publish-production-images.sh` | Artifact Registry images only |
 | API access | Local unauthenticated access only | Cloud Run IAM with explicit `roles/run.invoker` members | Same model as production, separate identities |
 | Control-plane identity | Local developer identity and kubeconfig | Dedicated Cloud Run service account | Separate Cloud Run service account |
 | Kubernetes permissions | Local developer permissions | Minimal RBAC for managed namespace resources | Same minimal RBAC in staging namespace or cluster |
@@ -58,6 +58,7 @@ The production environment should use:
 - GKE for workloads and the production LGTM stack
 - Cloud Run for the external control plane
 - Artifact Registry for all production images
+- production images published as immutable `git-<short-sha>` tags, with `prod` available only as a demo convenience tag
 - explicit Cloud Run invoker IAM
 - a dedicated Cloud Run service account
 - minimal Kubernetes RBAC for the managed namespace resources

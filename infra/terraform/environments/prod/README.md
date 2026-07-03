@@ -22,7 +22,6 @@ This directory is now the production Terraform root for the GKE foundation. It p
 
 TODO:
 
-- publish production images
 - deploy production observability and workload stack to GKE
 - deploy the production control plane to Cloud Run
 - route Cloud Run deployment events into production Loki
@@ -68,3 +67,23 @@ The first production Terraform implementation should make these inputs explicit:
 - artifact bucket name or naming convention
 
 Use [terraform.tfvars.example](terraform.tfvars.example) as the initial operator-facing shape. Cloud Run service deployment is still deferred to Task 32.
+
+## Production Images
+
+The production root now exposes canonical Artifact Registry image names:
+
+- `artifact_registry_image_prefix`
+- `control_plane_container_image`
+- `fastapi_service_container_image`
+- `production_image_tag`
+
+Publish images with:
+
+```bash
+./scripts/publish-production-images.sh \
+  --project-id <project-id> \
+  --region europe-west10 \
+  --repository service-launchpad
+```
+
+The script publishes both services. By default, it creates an immutable `git-<short-sha>` tag and also tags the same images as `prod`. Set `production_image_tag` in `terraform.tfvars` when a later task needs Terraform outputs to point at a specific immutable tag instead of the mutable `prod` demo tag.

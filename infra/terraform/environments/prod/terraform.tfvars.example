@@ -8,7 +8,7 @@ labels = {
   environment = "prod"
 }
 
-a# Production network shape.
+# Production network shape.
 subnet_ip_cidr_range = "10.30.0.0/24"
 secondary_ip_ranges = [
   {
@@ -23,7 +23,7 @@ secondary_ip_ranges = [
 
 # Production identities.
 control_plane_service_account_id = "slp-prod-control-plane"
-gke_node_service_account_id = "slp-prod-gke-node"
+gke_node_service_account_id      = "slp-prod-gke-node"
 
 # Production GKE shape.
 gke_cluster_enabled         = true
@@ -48,6 +48,8 @@ gke_master_authorized_networks = [
 ]
 
 # Production artifact bucket. The final bucket name must be globally unique.
+artifact_registry_repository_id = "service-launchpad"
+production_image_tag            = "prod"
 artifact_bucket_name          = "production-service-launchpad-artifacts"
 artifact_bucket_force_destroy = false
 

@@ -43,6 +43,26 @@ output "artifact_registry_repository" {
   value       = google_artifact_registry_repository.service_launchpad.name
 }
 
+output "artifact_registry_image_prefix" {
+  description = "Artifact Registry image prefix for production Service Launchpad images."
+  value       = local.artifact_image_prefix
+}
+
+output "production_image_tag" {
+  description = "Container image tag selected for production runtime configuration."
+  value       = var.production_image_tag
+}
+
+output "control_plane_container_image" {
+  description = "Production control-plane image expected by the Cloud Run deployment task."
+  value       = local.control_plane_image
+}
+
+output "fastapi_service_container_image" {
+  description = "Production fastapi-service image expected by the GKE workload deployment task."
+  value       = local.fastapi_service_image
+}
+
 output "control_plane_service_account_email" {
   description = "Email of the production Cloud Run control-plane service account."
   value       = google_service_account.control_plane.email

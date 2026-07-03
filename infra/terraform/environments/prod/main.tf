@@ -1,7 +1,10 @@
 locals {
-  environment          = "prod"
-  resource_name_prefix = "${var.name_prefix}-${local.environment}"
-  artifact_bucket_name = coalesce(var.artifact_bucket_name, "${var.project_id}-${local.resource_name_prefix}-artifacts")
+  environment           = "prod"
+  resource_name_prefix  = "${var.name_prefix}-${local.environment}"
+  artifact_bucket_name  = coalesce(var.artifact_bucket_name, "${var.project_id}-${local.resource_name_prefix}-artifacts")
+  artifact_image_prefix = "${var.region}-docker.pkg.dev/${var.project_id}/${var.artifact_registry_repository_id}"
+  control_plane_image   = "${local.artifact_image_prefix}/control-plane:${var.production_image_tag}"
+  fastapi_service_image = "${local.artifact_image_prefix}/fastapi-service:${var.production_image_tag}"
 
   common_labels = merge(
     {

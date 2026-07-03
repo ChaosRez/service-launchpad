@@ -84,19 +84,17 @@ Implemented so far:
 - Terraform `prod` foundation for custom VPC, IAM, GCS, Artifact Registry, and a minimal standard GKE cluster
 - explicit `prod` and future `staging` environment boundaries under `infra/terraform/environments`
 - authenticated Cloud Run API access model for production clients
+- production image publishing script and GKE production workload overlay using Artifact Registry images
 - baseline GitHub Actions CI for the repository
 
 Planned next milestones:
 
-1. Validate the `client-go` deployer against Minikube
-2. Write the production network and access design note
-3. Publish production images through Artifact Registry
-4. Deploy the production observability and workload stack to GKE
-5. Deploy the production control plane to Cloud Run
-6. Validate service registration and deployment through the Cloud Run control plane
-7. Route Cloud Run deployment events into production Loki
-8. Write observability cost-analysis and telemetry strategy documentation
-9. Add more demo material: API flow, Kubernetes resource views, load-test runbook, and autoscaling screenshots
+1. Deploy the production observability and workload stack to GKE
+2. Deploy the production control plane to Cloud Run
+3. Validate service registration and deployment through the Cloud Run control plane
+4. Route Cloud Run deployment events into production Loki
+5. Write observability cost-analysis and telemetry strategy documentation
+6. Add more demo material: API flow, Kubernetes resource views, load-test runbook, and autoscaling screenshots
 
 ## Monitoring Stack
 

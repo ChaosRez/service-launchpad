@@ -88,6 +88,17 @@ variable "artifact_registry_repository_id" {
   }
 }
 
+variable "production_image_tag" {
+  description = "Container image tag used by production runtime configuration outputs. The publish script also pushes this tag when ALSO_TAGS includes it."
+  type        = string
+  default     = "prod"
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$", var.production_image_tag))
+    error_message = "production_image_tag must be a valid Docker tag."
+  }
+}
+
 variable "artifact_bucket_name" {
   description = "Optional globally unique name for the production artifact bucket. Defaults to <project_id>-<name_prefix>-prod-artifacts."
   type        = string

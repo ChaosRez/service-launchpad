@@ -6,6 +6,7 @@ This directory will hold local helper scripts for Minikube bootstrapping, deploy
 
 - `bootstrap-minikube.sh`: starts a local Minikube cluster, updates the `kubectl` context, enables `metrics-server`, and can print the Docker environment command for local image builds
 - `load-test-fastapi-service.sh`: runs an in-cluster `k6` Job against `fastapi-service` and remote-writes `k6_*` metrics to `vmagent`, which fans them out to both `VictoriaMetrics` and `Mimir`
+- `publish-production-images.sh`: builds and pushes the production `control-plane` and `fastapi-service` images to Artifact Registry
 - `smoke-test-fastapi-service.sh`: boots Minikube, builds the service image into Minikube, starts the control plane, registers `fastapi-service`, deploys it through the control-plane API, and validates the main endpoints
 
 ## Control Plane Smoke Test
@@ -45,6 +46,37 @@ The script:
 Current prerequisite: the referenced image must already be available to the cluster. The smoke test handles that automatically for local Minikube by building the image into Minikube's Docker daemon first.
 
 Use `--skip-image-build` only when the image already exists in the Minikube Docker daemon or is pullable by the cluster.
+
+## Production Image Publishing
+
+The production path uses Artifact Registry images instead of Minikube-local images. The Terraform production root creates the repository; this script publishes the two images expected by later GKE and Cloud Run tasks.
+
+Default behavior:
+
+- primary tag: `git-<short-sha>`
+- extra tag: `prod`
+- platform: `linux/amd64`
+- repository: `<region>-docker.pkg.dev/<project-id>/service-launchpad`
+
+Example:
+
+```bash
+./scripts/publish-production-images.sh \
+  --project-id geofaas-411316 \
+  --region europe-west10 \
+  --repository service-launchpad
+```
+
+To pin a specific production runtime tag:
+
+```bash
+./scripts/publish-production-images.sh \
+  --project-id geofaas-411316 \
+  --tag git-$(git rev-parse --short=12 HEAD) \
+  --also-tag ""
+```
+
+The script prints the resulting `CONTROL_PLANE_IMAGE` and `FASTAPI_SERVICE_IMAGE`. Use the same tag in `infra/terraform/environments/prod/terraform.tfvars` through `production_image_tag` when a later task wires Cloud Run and GKE runtime configuration.
 
 ## k6 Load Testing
 

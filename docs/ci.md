@@ -16,13 +16,14 @@ The goal is quick, secret-free validation of the current repository surfaces: Go
 - Terraform initialization without a backend
 - Terraform validation for `infra/terraform/environments/dev`
 - Kustomize rendering for `k8s/base` and `k8s/monitoring`
+- Kustomize rendering for the production workload overlay at `k8s/overlays/prod`
 - Offline Kubernetes schema validation for rendered manifests with `kubeconform`
 
 ## Deferred
 
 - No `terraform apply`
 - No authenticated GCP deployment
-- No Artifact Registry push
+- No Artifact Registry push from CI; production image publishing is handled by `scripts/publish-production-images.sh`
 - No Cloud Run deployment
 - No `GKE` deployment
 - No remote Minikube access from CI
@@ -33,6 +34,6 @@ The goal is quick, secret-free validation of the current repository surfaces: Go
 ## Future Additions
 
 - Add authenticated `terraform plan` against a dedicated GCP project.
-- Push selected CI images to Artifact Registry.
+- Add authenticated GitHub Actions publishing to Artifact Registry after Workload Identity Federation or scoped deploy credentials are configured.
 - Add a small Kubernetes smoke test with `kind`.
 - Add explicit Cloud Run / `GKE` validation once the production path is implemented.

@@ -100,6 +100,9 @@ jobs:
       - name: Render monitoring manifests
         run: kubectl kustomize k8s/monitoring >"${RUNNER_TEMP}/service-launchpad-monitoring.yaml"
 
+      - name: Render production workload overlay
+        run: kubectl kustomize k8s/overlays/prod >"${RUNNER_TEMP}/service-launchpad-prod.yaml"
+
       - name: Validate base manifests
         run: |
           docker run --rm \
@@ -117,3 +120,12 @@ jobs:
             -strict \
             -summary \
             /manifests/service-launchpad-monitoring.yaml
+
+      - name: Validate production workload overlay
+        run: |
+          docker run --rm \
+            -v "${RUNNER_TEMP}:/manifests:ro" \
+            ghcr.io/yannh/kubeconform:v0.6.7 \
+            -strict \
+            -summary \
+            /manifests/service-launchpad-prod.yaml

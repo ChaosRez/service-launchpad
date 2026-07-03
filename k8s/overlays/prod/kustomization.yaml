@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+namespace: service-launchpad-prod
+
+images:
+  - name: service-launchpad/fastapi-service
+    newName: europe-west10-docker.pkg.dev/production-gcp-project-id/service-launchpad/fastapi-service
+    newTag: prod
+
+patches:
+  - target:
+      kind: Namespace
+      name: service-launchpad-dev
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: service-launchpad-prod
+      - op: replace
+        path: /metadata/labels/app.kubernetes.io~1environment
+        value: prod
