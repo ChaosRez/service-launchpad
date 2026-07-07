@@ -8,7 +8,7 @@ namespace: service-launchpad-prod
 
 images:
   - name: service-launchpad/fastapi-service
-    newName: europe-west10-docker.pkg.dev/production-gcp-project-id/service-launchpad/fastapi-service
+    newName: europe-west10-docker.pkg.dev/geofaas-411316/service-launchpad/fastapi-service
     newTag: prod
 
 patches:

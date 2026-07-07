@@ -5,6 +5,7 @@ This directory will hold local helper scripts for Minikube bootstrapping, deploy
 ## Available Scripts
 
 - `bootstrap-minikube.sh`: starts a local Minikube cluster, updates the `kubectl` context, enables `metrics-server`, and can print the Docker environment command for local image builds
+- `deploy-production-platform.sh`: applies the production observability and workload overlays to GKE from a host that can reach the private Kubernetes API
 - `load-test-fastapi-service.sh`: runs an in-cluster `k6` Job against `fastapi-service` and remote-writes `k6_*` metrics to `vmagent`, which fans them out to both `VictoriaMetrics` and `Mimir`
 - `publish-production-images.sh`: builds and pushes the production `control-plane` and `fastapi-service` images to Artifact Registry
 - `smoke-test-fastapi-service.sh`: boots Minikube, builds the service image into Minikube, starts the control plane, registers `fastapi-service`, deploys it through the control-plane API, and validates the main endpoints

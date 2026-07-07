@@ -27,6 +27,14 @@ kubectl rollout status daemonset/promtail -n service-launchpad-observability
 kubectl rollout status deployment/grafana -n service-launchpad-observability
 ```
 
+For production `GKE`, use the explicit overlay instead of applying this local base directly:
+
+```bash
+kubectl apply -k k8s/overlays/prod-observability
+```
+
+Task 31 uses `scripts/deploy-production-platform.sh` to apply both the production observability overlay and the production workload overlay from a host that can reach the private GKE Kubernetes API.
+
 ## Access
 
 ```bash

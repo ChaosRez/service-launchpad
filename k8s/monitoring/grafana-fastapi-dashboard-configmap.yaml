@@ -291,28 +291,28 @@ data:
           "targets": [
             {
               "editorMode": "code",
-              "expr": "kube_horizontalpodautoscaler_status_current_replicas{namespace=\"service-launchpad-dev\",horizontalpodautoscaler=\"fastapi-service\"}",
+              "expr": "kube_horizontalpodautoscaler_status_current_replicas{namespace=~\"service-launchpad-(dev|prod)\",horizontalpodautoscaler=\"fastapi-service\"}",
               "legendFormat": "current replicas",
               "range": true,
               "refId": "A"
             },
             {
               "editorMode": "code",
-              "expr": "kube_horizontalpodautoscaler_status_desired_replicas{namespace=\"service-launchpad-dev\",horizontalpodautoscaler=\"fastapi-service\"}",
+              "expr": "kube_horizontalpodautoscaler_status_desired_replicas{namespace=~\"service-launchpad-(dev|prod)\",horizontalpodautoscaler=\"fastapi-service\"}",
               "legendFormat": "desired replicas",
               "range": true,
               "refId": "B"
             },
             {
               "editorMode": "code",
-              "expr": "kube_deployment_status_replicas_available{namespace=\"service-launchpad-dev\",deployment=\"fastapi-service\"}",
+              "expr": "kube_deployment_status_replicas_available{namespace=~\"service-launchpad-(dev|prod)\",deployment=\"fastapi-service\"}",
               "legendFormat": "available replicas",
               "range": true,
               "refId": "C"
             },
             {
               "editorMode": "code",
-              "expr": "kube_deployment_status_replicas_unavailable{namespace=\"service-launchpad-dev\",deployment=\"fastapi-service\"}",
+              "expr": "kube_deployment_status_replicas_unavailable{namespace=~\"service-launchpad-(dev|prod)\",deployment=\"fastapi-service\"}",
               "legendFormat": "unavailable replicas",
               "range": true,
               "refId": "D"

@@ -17,6 +17,7 @@ The goal is quick, secret-free validation of the current repository surfaces: Go
 - Terraform validation for `infra/terraform/environments/dev`
 - Kustomize rendering for `k8s/base` and `k8s/monitoring`
 - Kustomize rendering for the production workload overlay at `k8s/overlays/prod`
+- Kustomize rendering for the production observability overlay at `k8s/overlays/prod-observability`
 - Offline Kubernetes schema validation for rendered manifests with `kubeconform`
 
 ## Deferred

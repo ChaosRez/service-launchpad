@@ -85,11 +85,12 @@ Implemented so far:
 - explicit `prod` and future `staging` environment boundaries under `infra/terraform/environments`
 - authenticated Cloud Run API access model for production clients
 - production image publishing script and GKE production workload overlay using Artifact Registry images
+- production GKE platform deploy script and private-access runbook for the workload and LGTM observability stack
 - baseline GitHub Actions CI for the repository
 
 Planned next milestones:
 
-1. Deploy the production observability and workload stack to GKE
+1. Run the Task 31 production deploy script from a host with private GKE API access
 2. Deploy the production control plane to Cloud Run
 3. Validate service registration and deployment through the Cloud Run control plane
 4. Route Cloud Run deployment events into production Loki

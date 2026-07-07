@@ -171,8 +171,8 @@ These are not required for the first production demo, but the custom VPC and exp
 Task 29 turned the first GKE foundation into Terraform with a private endpoint default. Remaining decisions for later production tasks:
 
 - whether the first live demo keeps the private endpoint or temporarily uses the public endpoint fallback with authorized networks
-- how operators and CI reach the private Kubernetes API for Task 31 manifest deployment: VPN, Cloud Workstations, bastion VM, or private runner inside the production VPC
-- how trusted operators reach production Grafana remotely: VPN, Cloud Workstations, bastion tunnel, or internal HTTPS load balancer with Identity-Aware Proxy
+- Task 31 first deployment path: run Kubernetes apply commands from a VPN-connected operator workstation, Cloud Workstations environment, bastion VM, or private runner that can reach the private GKE Kubernetes API
+- Task 31 first Grafana access path: private `kubectl port-forward` from that same trusted private-access host
 - Cloud Run ingress enum
 - Cloud Run VPC egress mode
 - whether Grafana needs an Internal Load Balancer immediately

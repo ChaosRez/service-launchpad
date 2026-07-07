@@ -22,7 +22,7 @@ This directory is now the production Terraform root for the GKE foundation. It p
 
 TODO:
 
-- deploy production observability and workload stack to GKE
+- run production observability and workload deploy script from a host with private GKE API access
 - deploy the production control plane to Cloud Run
 - route Cloud Run deployment events into production Loki
 - validate production registration and deployment
@@ -66,7 +66,7 @@ The first production Terraform implementation should make these inputs explicit:
 - GKE master authorized networks when public endpoint access is enabled
 - artifact bucket name or naming convention
 
-Use [terraform.tfvars.example](terraform.tfvars.example) as the initial operator-facing shape. Cloud Run service deployment is still deferred to Task 32.
+Use [terraform.tfvars.example](terraform.tfvars.example) as the initial operator-facing shape. Task 31 production platform deployment commands live in [../../../../docs/production-platform-runbook.md](../../../../docs/production-platform-runbook.md). Cloud Run service deployment is still deferred to Task 32.
 
 ## Production Images
 

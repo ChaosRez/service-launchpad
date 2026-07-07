@@ -71,6 +71,7 @@ Production must make these decisions explicit before it is considered complete:
 - whether Cloud Run needs VPC egress
 - how operators reach the Cloud Run API
 - how Grafana and observability endpoints remain private
+- how operators or CI run `kubectl apply` against the private GKE API for production manifests
 - how control-plane deployment events move from Cloud Logging into Loki
 - what rollback or cleanup behavior exists after a failed deployment
 

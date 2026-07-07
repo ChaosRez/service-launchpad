@@ -1,0 +1,46 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../monitoring
+
+patches:
+  - target:
+      kind: Namespace
+      name: service-launchpad-observability
+    patch: |-
+      - op: add
+        path: /metadata/labels/app.kubernetes.io~1environment
+        value: prod
+  - target:
+      kind: ConfigMap
+      name: vmagent-config
+    patch: |-
+      - op: replace
+        path: /data/prometheus.yml
+        value: |
+          global:
+            scrape_interval: 15s
+          scrape_configs:
+            - job_name: vmagent
+              static_configs:
+                - targets:
+                    - localhost:8429
+            - job_name: victoriametrics
+              static_configs:
+                - targets:
+                    - victoriametrics.service-launchpad-observability.svc.cluster.local:8428
+            - job_name: mimir
+              metrics_path: /metrics
+              static_configs:
+                - targets:
+                    - mimir.service-launchpad-observability.svc.cluster.local:9009
+            - job_name: kube-state-metrics
+              static_configs:
+                - targets:
+                    - kube-state-metrics.service-launchpad-observability.svc.cluster.local:8080
+            - job_name: fastapi-service
+              metrics_path: /metrics
+              static_configs:
+                - targets:
+                    - fastapi-service.service-launchpad-prod.svc.cluster.local:8000
