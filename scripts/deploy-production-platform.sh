@@ -80,9 +80,9 @@ fi
 
 run_kubectl() {
   printf '+ kubectl'
-  printf ' %q' "${kubectl_args[@]}" "$@"
+  printf ' %q' ${kubectl_args[@]+"${kubectl_args[@]}"} "$@"
   printf '\n'
-  kubectl "${kubectl_args[@]}" "$@"
+  kubectl ${kubectl_args[@]+"${kubectl_args[@]}"} "$@"
 }
 
 if ! command -v kubectl >/dev/null; then
@@ -117,12 +117,12 @@ if [[ -n "${KUBE_CONTEXT}" ]]; then
 fi
 
 if [[ "${APPLY_OBSERVABILITY}" == "true" ]]; then
-  run_kubectl apply -k "${OBSERVABILITY_OVERLAY}" "${dry_run_args[@]}"
+  run_kubectl apply -k "${OBSERVABILITY_OVERLAY}" ${dry_run_args[@]+"${dry_run_args[@]}"}
 fi
 
 if [[ "${APPLY_WORKLOAD}" == "true" ]]; then
-  run_kubectl apply -k "${WORKLOAD_OVERLAY}" "${dry_run_args[@]}"
-  run_kubectl set image deployment/fastapi-service "fastapi-service=${FASTAPI_SERVICE_IMAGE}" -n service-launchpad-prod "${dry_run_args[@]}"
+  run_kubectl apply -k "${WORKLOAD_OVERLAY}" ${dry_run_args[@]+"${dry_run_args[@]}"}
+  run_kubectl set image deployment/fastapi-service "fastapi-service=${FASTAPI_SERVICE_IMAGE}" -n service-launchpad-prod ${dry_run_args[@]+"${dry_run_args[@]}"}
 fi
 
 if [[ "${DRY_RUN}" == "true" || "${WAIT_FOR_ROLLOUT}" == "false" ]]; then
