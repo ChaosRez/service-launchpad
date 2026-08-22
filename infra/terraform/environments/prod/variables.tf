@@ -153,6 +153,64 @@ variable "control_plane_service_account_id" {
   }
 }
 
+variable "control_plane_enabled" {
+  description = "Whether to deploy the production control plane to Cloud Run. Keep false until the GKE platform has passed Task 31 verification."
+  type        = bool
+  default     = false
+}
+
+variable "control_plane_target_namespace" {
+  description = "Kubernetes namespace managed by the production control plane."
+  type        = string
+  default     = "service-launchpad-prod"
+}
+
+variable "control_plane_ingress" {
+  description = "Cloud Run ingress policy for the authenticated control-plane API."
+  type        = string
+  default     = "INGRESS_TRAFFIC_ALL"
+
+  validation {
+    condition = contains([
+      "INGRESS_TRAFFIC_ALL",
+      "INGRESS_TRAFFIC_INTERNAL_ONLY",
+      "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+    ], var.control_plane_ingress)
+    error_message = "control_plane_ingress must be a supported Cloud Run v2 ingress value."
+  }
+}
+
+variable "control_plane_min_instances" {
+  description = "Minimum number of Cloud Run control-plane instances. Zero keeps the demo cost controlled."
+  type        = number
+  default     = 0
+}
+
+variable "control_plane_max_instances" {
+  description = "Maximum number of Cloud Run control-plane instances."
+  type        = number
+  default     = 2
+}
+
+variable "control_plane_deletion_protection" {
+  description = "Whether Cloud Run deletion protection is enabled."
+  type        = bool
+  default     = false
+}
+
+variable "control_plane_invoker_members" {
+  description = "IAM members allowed to invoke the authenticated production control-plane API."
+  type        = list(string)
+  default     = []
+}
+
+check "control_plane_requires_gke" {
+  assert {
+    condition     = !var.control_plane_enabled || var.gke_cluster_enabled
+    error_message = "control_plane_enabled requires gke_cluster_enabled so the configured Kubernetes target exists."
+  }
+}
+
 variable "gke_node_service_account_id" {
   description = "Account ID for the production GKE node service account."
   type        = string
@@ -189,7 +247,13 @@ variable "gke_enable_private_nodes" {
 }
 
 variable "gke_enable_private_endpoint" {
-  description = "Whether the production GKE Kubernetes API endpoint should be private only."
+  description = "Whether the production GKE IP-based Kubernetes API endpoint should be private only. This does not disable the separately controlled DNS endpoint."
+  type        = bool
+  default     = true
+}
+
+variable "gke_enable_dns_endpoint" {
+  description = "Whether operators may reach production GKE through its IAM-authenticated DNS endpoint from external networks."
   type        = bool
   default     = true
 }

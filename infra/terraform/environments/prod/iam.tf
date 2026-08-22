@@ -32,6 +32,12 @@ resource "google_storage_bucket_iam_member" "control_plane_object_viewer" {
   member = google_service_account.control_plane.member
 }
 
+resource "google_project_iam_member" "control_plane_cluster_viewer" {
+  project = var.project_id
+  role    = "roles/container.clusterViewer"
+  member  = google_service_account.control_plane.member
+}
+
 resource "google_project_iam_member" "gke_node_default_service_account" {
   project = var.project_id
   role    = "roles/container.defaultNodeServiceAccount"

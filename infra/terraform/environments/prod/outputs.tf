@@ -58,6 +58,21 @@ output "control_plane_container_image" {
   value       = local.control_plane_image
 }
 
+output "control_plane_enabled" {
+  description = "Whether the production Cloud Run control plane is enabled."
+  value       = var.control_plane_enabled
+}
+
+output "control_plane_service_name" {
+  description = "Production Cloud Run control-plane service name when enabled."
+  value       = var.control_plane_enabled ? google_cloud_run_v2_service.control_plane[0].name : null
+}
+
+output "control_plane_service_uri" {
+  description = "Authenticated production Cloud Run control-plane URI when enabled."
+  value       = var.control_plane_enabled ? google_cloud_run_v2_service.control_plane[0].uri : null
+}
+
 output "fastapi_service_container_image" {
   description = "Production fastapi-service image expected by the GKE workload deployment task."
   value       = local.fastapi_service_image
@@ -107,4 +122,14 @@ output "gke_private_endpoint_enabled" {
 output "gke_private_nodes_enabled" {
   description = "Whether production GKE private nodes are enabled."
   value       = module.gke_cluster.private_nodes_enabled
+}
+
+output "gke_dns_endpoint_enabled" {
+  description = "Whether IAM-authenticated external access through the production GKE DNS endpoint is enabled."
+  value       = module.gke_cluster.dns_endpoint_enabled
+}
+
+output "gke_dns_endpoint" {
+  description = "Production GKE DNS endpoint used by operators and compatible Kubernetes IDE clients."
+  value       = module.gke_cluster.dns_endpoint
 }

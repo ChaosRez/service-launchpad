@@ -31,6 +31,7 @@ gke_cluster_name            = "service-launchpad-prod-gke"
 gke_deletion_protection     = false
 gke_enable_private_nodes    = true
 gke_enable_private_endpoint = true
+gke_enable_dns_endpoint     = true
 gke_master_ipv4_cidr_block  = "172.16.0.0/28"
 gke_release_channel         = "REGULAR"
 gke_node_locations          = ["europe-west10-a"]
@@ -53,11 +54,13 @@ production_image_tag            = "prod"
 artifact_bucket_name          = "production-service-launchpad-artifacts"
 artifact_bucket_force_destroy = false
 
-# Future Task 32 Cloud Run control-plane settings will add variables such as:
-# control_plane_target_namespace
-# control_plane_container_image
-# control_plane_ingress
-# control_plane_enable_vpc_egress
-# control_plane_invoker_members
-# control_plane_kube_api_server
-# control_plane_kube_ca_data
+# Enable only after the Task 31 GKE platform verification succeeds.
+control_plane_enabled             = false
+control_plane_target_namespace    = "service-launchpad-prod"
+control_plane_ingress             = "INGRESS_TRAFFIC_ALL"
+control_plane_min_instances       = 0
+control_plane_max_instances       = 2
+control_plane_deletion_protection = false
+control_plane_invoker_members = [
+  # "user:operator@example.com",
+]

@@ -38,3 +38,15 @@ output "private_nodes_enabled" {
   description = "Whether private nodes are enabled."
   value       = var.enable_private_nodes
 }
+
+output "dns_endpoint_enabled" {
+  description = "Whether external IAM-authenticated access through the GKE DNS endpoint is enabled."
+  value       = var.enable_dns_endpoint
+}
+
+output "dns_endpoint" {
+  description = "GKE control-plane DNS endpoint when external DNS access is enabled."
+  value = var.enabled && var.enable_dns_endpoint ? (
+    google_container_cluster.this[0].control_plane_endpoints_config[0].dns_endpoint_config[0].endpoint
+  ) : null
+}

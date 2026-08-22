@@ -69,6 +69,12 @@ variable "enable_private_endpoint" {
   default     = false
 }
 
+variable "enable_dns_endpoint" {
+  description = "Whether operators may reach the GKE control plane through its IAM-authenticated DNS endpoint."
+  type        = bool
+  default     = false
+}
+
 variable "master_ipv4_cidr_block" {
   description = "RFC1918 /28 CIDR block for the private GKE control-plane endpoint."
   type        = string

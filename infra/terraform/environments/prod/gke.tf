@@ -16,6 +16,7 @@ module "gke_cluster" {
   deletion_protection        = var.gke_deletion_protection
   enable_private_nodes       = var.gke_enable_private_nodes
   enable_private_endpoint    = var.gke_enable_private_endpoint
+  enable_dns_endpoint        = var.gke_enable_dns_endpoint
   master_ipv4_cidr_block     = var.gke_master_ipv4_cidr_block
   master_authorized_networks = var.gke_master_authorized_networks
   release_channel            = var.gke_release_channel

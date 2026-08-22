@@ -31,6 +31,12 @@ resource "google_container_cluster" "this" {
     master_ipv4_cidr_block  = var.master_ipv4_cidr_block
   }
 
+  control_plane_endpoints_config {
+    dns_endpoint_config {
+      allow_external_traffic = var.enable_dns_endpoint
+    }
+  }
+
   dynamic "master_authorized_networks_config" {
     for_each = var.enable_private_endpoint || length(var.master_authorized_networks) > 0 ? [1] : []
 
