@@ -1,0 +1,13 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: service-launchpad-control-plane
+  namespace: service-launchpad-prod
+subjects:
+  - kind: User
+    name: slp-prod-control-plane@geofaas-411316.iam.gserviceaccount.com
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: service-launchpad-control-plane
+  apiGroup: rbac.authorization.k8s.io

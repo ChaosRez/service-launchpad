@@ -3,6 +3,10 @@ kind: Kustomization
 
 resources:
   - ../../base
+  - control-plane-cluster-role.yaml
+  - control-plane-cluster-role-binding.yaml
+  - control-plane-role.yaml
+  - control-plane-role-binding.yaml
 
 namespace: service-launchpad-prod
 
