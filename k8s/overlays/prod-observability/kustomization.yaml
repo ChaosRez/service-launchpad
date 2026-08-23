@@ -4,6 +4,11 @@ kind: Kustomization
 resources:
   - ../../monitoring
 
+images:
+  - name: registry.k8s.io/kube-state-metrics/kube-state-metrics
+    newName: europe-west10-docker.pkg.dev/geofaas-411316/service-launchpad/kube-state-metrics
+    newTag: v2.13.0
+
 patches:
   - target:
       kind: Namespace

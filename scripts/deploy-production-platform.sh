@@ -16,7 +16,7 @@ usage() {
 Usage: ./scripts/deploy-production-platform.sh [options]
 
 Applies the production observability stack and fastapi-service workload overlay
-to GKE. Run this from a machine that can reach the private GKE Kubernetes API.
+to GKE. Configure the IAM-authenticated GKE DNS endpoint before running it.
 
 Options:
   --context <name>          kubectl context to use.
@@ -24,7 +24,8 @@ Options:
   --skip-observability      Do not apply the production observability overlay.
   --skip-workload           Do not apply the production workload overlay.
   --no-wait                 Do not wait for rollouts.
-  --dry-run                 Render/apply with kubectl server-side dry-run.
+  --dry-run                 Render/apply with kubectl server-side dry-run. On a
+                            fresh cluster, create the target Namespaces first.
   -h, --help                Show this help.
 
 Environment equivalents:

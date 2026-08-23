@@ -21,10 +21,12 @@ The overlay also replaces the local `vmagent` scrape config so production scrape
 
 Cloud Run control-plane metrics are intentionally not scraped here; Task 32/32a handles production control-plane telemetry separately.
 
-Apply from a machine that can reach the private GKE Kubernetes API:
+The production GKE nodes have private addresses and no Cloud NAT. The overlay therefore pulls `kube-state-metrics:v2.13.0` from the project Artifact Registry mirror instead of directly from `registry.k8s.io`. Mirror that image before the first deployment by following `docs/production-platform-runbook.md`.
+
+Apply through the IAM-authenticated GKE DNS endpoint:
 
 ```bash
-kubectl apply -k k8s/overlays/prod-observability
+kubectl --context prod-gke apply -k k8s/overlays/prod-observability
 ```
 
 Check rollout:
