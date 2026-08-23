@@ -1,12 +1,17 @@
 package main
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -23,6 +28,7 @@ const (
 	envKubeCAData          = "CONTROL_PLANE_KUBE_CA_DATA"
 	envKubeBearerToken     = "CONTROL_PLANE_KUBE_BEARER_TOKEN"
 	envKubeBearerTokenFile = "CONTROL_PLANE_KUBE_BEARER_TOKEN_FILE"
+	envKubeUseADC          = "CONTROL_PLANE_KUBE_USE_ADC"
 	envAuditBucket         = "CONTROL_PLANE_AUDIT_BUCKET"
 	envAuditPrefix         = "CONTROL_PLANE_AUDIT_PREFIX"
 	envGCSEndpoint         = "CONTROL_PLANE_GCS_ENDPOINT"
@@ -114,6 +120,23 @@ func buildKubernetesRESTConfig(kubeContext string) (*rest.Config, error) {
 				return nil, fmt.Errorf("decode %s: %w", envKubeCAData, err)
 			}
 			config.TLSClientConfig.CAData = decoded
+		}
+
+		useADC, err := strconv.ParseBool(strings.TrimSpace(os.Getenv(envKubeUseADC)))
+		if err != nil && strings.TrimSpace(os.Getenv(envKubeUseADC)) != "" {
+			return nil, fmt.Errorf("parse %s: %w", envKubeUseADC, err)
+		}
+		if useADC {
+			if config.BearerToken != "" || config.BearerTokenFile != "" {
+				return nil, fmt.Errorf("%s cannot be combined with %s or %s", envKubeUseADC, envKubeBearerToken, envKubeBearerTokenFile)
+			}
+			tokenSource, err := google.DefaultTokenSource(context.Background(), "https://www.googleapis.com/auth/cloud-platform")
+			if err != nil {
+				return nil, fmt.Errorf("load Google application default credentials for Kubernetes: %w", err)
+			}
+			config.WrapTransport = func(base http.RoundTripper) http.RoundTripper {
+				return &oauth2.Transport{Source: tokenSource, Base: base}
+			}
 		}
 
 		return config, nil

@@ -774,6 +774,27 @@ func TestBuildKubernetesRESTConfigFromExplicitEndpoint(t *testing.T) {
 	}
 }
 
+func TestBuildKubernetesRESTConfigRejectsInvalidADCSetting(t *testing.T) {
+	t.Setenv(envKubeAPIServer, "https://10.0.0.1")
+	t.Setenv(envKubeUseADC, "sometimes")
+
+	_, err := buildKubernetesRESTConfig("")
+	if err == nil || !strings.Contains(err.Error(), envKubeUseADC) {
+		t.Fatalf("expected invalid %s error, got %v", envKubeUseADC, err)
+	}
+}
+
+func TestBuildKubernetesRESTConfigRejectsADCWithStaticToken(t *testing.T) {
+	t.Setenv(envKubeAPIServer, "https://10.0.0.1")
+	t.Setenv(envKubeUseADC, "true")
+	t.Setenv(envKubeBearerToken, "test-token")
+
+	_, err := buildKubernetesRESTConfig("")
+	if err == nil || !strings.Contains(err.Error(), "cannot be combined") {
+		t.Fatalf("expected conflicting Kubernetes credentials error, got %v", err)
+	}
+}
+
 // cover successful and failed deploy requests with a fake deployer
 func TestHandleServiceDeploy(t *testing.T) {
 	store, err := newServiceStore("")
