@@ -22,7 +22,7 @@ This directory is now the production Terraform root for the GKE foundation. It p
 
 TODO:
 
-- run production observability and workload deploy script from a host with private GKE API access
+- run the production observability and workload deploy script through the verified GKE DNS endpoint
 - deploy the production control plane to Cloud Run
 - route Cloud Run deployment events into production Loki
 - validate production registration and deployment
@@ -47,10 +47,12 @@ The first GKE configuration is cost-aware:
 - one node per selected node location
 - `e2-standard-2` node type by default
 - private nodes enabled by default
-- private Kubernetes API endpoint enabled by default
+- private IP Kubernetes API endpoint enabled for Cloud Run VPC access
+- IAM-authenticated DNS endpoint enabled for operators, Cloud Shell, and compatible IDEs
+- public IP Kubernetes API endpoint disabled by default
 - public Kubernetes API endpoint allowed only with explicit authorized networks as a demo fallback
 
-Set `gke_enable_private_endpoint = false` only when the public endpoint fallback is intentional and `gke_master_authorized_networks` is populated.
+Keep `gke_enable_private_endpoint = true` and `gke_enable_dns_endpoint = true` for the selected hybrid access model. Set `gke_enable_private_endpoint = false` only when the public IP endpoint fallback is intentional and `gke_master_authorized_networks` is populated.
 
 ## Expected Inputs
 

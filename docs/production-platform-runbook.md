@@ -4,29 +4,41 @@ This runbook covers the first production `GKE` platform deployment for Task 31.
 
 ## Access Assumption
 
-The production cluster currently uses a private Kubernetes API endpoint. Run the commands from a machine that can reach that private endpoint, such as:
+The production cluster keeps its public IP endpoint disabled and exposes two authenticated control-plane paths:
 
-- a bastion VM in the production VPC
-- Cloud Workstations attached to the production VPC
-- a VPN-connected operator workstation
-- a private CI runner in the production VPC
+- operators use the Google-managed DNS endpoint from a local workstation, Cloud Shell, or a compatible Kubernetes IDE
+- Cloud Run uses the private IP endpoint through production VPC egress
 
-Do not temporarily expose the Kubernetes API publicly unless that fallback is explicitly chosen with restrictive authorized networks.
+The DNS endpoint requires Google IAM authentication and Kubernetes RBAC authorization. It does not expose nodes, workloads, Grafana, or observability services.
 
 ## Prerequisites
 
 - Production Terraform has been applied.
 - Production images have been published with `scripts/publish-production-images.sh`.
-- `kubectl` is authenticated to `service-launchpad-prod-gke`.
+- `gke-gcloud-auth-plugin` is installed on the operator workstation.
+- `kubectl` is authenticated to `service-launchpad-prod-gke` through the DNS endpoint.
 
-Recommended credential command from an eligible private-network host:
+Configure the local kubeconfig entry:
 
 ```bash
 gcloud container clusters get-credentials service-launchpad-prod-gke \
   --project geofaas-411316 \
   --region europe-west10 \
-  --internal-ip
+  --dns-endpoint
 ```
+
+Verify the target before any apply:
+
+```bash
+kubectl config current-context
+kubectl config view --minify --output='jsonpath={.clusters[0].cluster.server}{"\n"}'
+kubectl cluster-info --request-timeout=10s
+kubectl get nodes -o wide
+```
+
+The server should use `https://gke-....gke.goog`, the context should be `gke_geofaas-411316_europe-west10_service-launchpad-prod-gke`, and the production node should report `Ready`.
+
+GoLand uses the same kubeconfig and `gke-gcloud-auth-plugin`; no separate GKE network configuration is required after the DNS-backed context works with `kubectl`.
 
 ## Deploy
 
@@ -72,7 +84,7 @@ Check Grafana privately:
 kubectl port-forward svc/grafana 3000:3000 -n service-launchpad-observability
 ```
 
-Open `http://127.0.0.1:3000` from the operator host or through the chosen tunnel.
+Open `http://127.0.0.1:3000` on the operator workstation.
 
 Generate workload traffic:
 
@@ -92,4 +104,4 @@ Expected observability checks:
 
 ## Access Model
 
-The first production Grafana access path is private `kubectl port-forward` from the same machine that can reach the private GKE API. Internal Load Balancer, IAP, DNS, and managed certificates remain later hardening work.
+The first production Grafana access path is private `kubectl port-forward` over the DNS-backed Kubernetes API connection. Internal Load Balancer, IAP, DNS for Grafana itself, and managed certificates remain later hardening work.

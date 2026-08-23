@@ -63,7 +63,7 @@ Detailed API and configuration documentation lives in [`services/control-plane`]
 | Local control plane to Minikube | **Validated end to end** through an automated smoke test. |
 | Workload and platform observability | **Validated locally** with dashboards, traces, logs, and load testing. |
 | CI | **Active** across Go, Python, containers, Terraform, and Kubernetes manifests. |
-| GKE workload and observability deployment | **Ready for live deployment and verification** from a private-access host. |
+| GKE workload and observability deployment | **Operator access verified** through the IAM-authenticated DNS endpoint; platform apply and telemetry verification remain pending. |
 | Externally hosted production control plane | **Next milestone** after the GKE platform path is verified. |
 
 ## Quickstart
@@ -119,10 +119,10 @@ Generate in-cluster load:
 
 The committed production path includes:
 
-- Terraform for the GCP network, Artifact Registry, GCS, and a private GKE cluster;
+- Terraform for the GCP network, Artifact Registry, GCS, and a private-node GKE cluster with DNS and private-IP control-plane paths;
 - production Kustomize overlays for the workload and observability stack;
 - immutable `git-<sha>` image publishing to Artifact Registry;
-- a deployment script and runbook for a trusted host that can reach the private Kubernetes API;
+- a deployment script and runbook for IAM-authenticated operator access through the GKE DNS endpoint;
 - CI rendering and schema validation for the production manifests.
 
 The next verification milestone is to deploy the workload and observability stack to GKE, confirm metrics/logs/traces, and document the resulting operational evidence. Running the control plane as an authenticated external cloud service follows that milestone and is not presented as a completed repository capability.

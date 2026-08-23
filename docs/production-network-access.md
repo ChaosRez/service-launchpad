@@ -51,15 +51,21 @@ Those ranges are placeholders for the demo production path. Before applying prod
 
 ## GKE API Endpoint Choice
 
-The preferred production direction is a private GKE control-plane endpoint reachable from Cloud Run through VPC egress. This keeps Kubernetes API access off the public internet and gives the project a clear network boundary.
+Production uses two deliberate GKE control-plane access paths:
 
-For a lower-friction demo, a public GKE endpoint is acceptable only if it is intentionally chosen and paired with strong authentication and restrictive authorized access. It should not be the accidental default.
+- operators, Cloud Shell, and Kubernetes-aware IDEs use the DNS endpoint with Google IAM authentication and Kubernetes RBAC authorization
+- Cloud Run uses the private IP endpoint through direct VPC egress
 
-Decision for the first production implementation:
+The public IP endpoint remains disabled. Enabling the DNS endpoint does not expose GKE nodes, workloads, or an unauthenticated Kubernetes API. It places the Kubernetes API behind a Google-managed `*.gke.goog` endpoint and requires the caller to have `container.clusters.connect` plus the Kubernetes authorization needed for the requested operation.
 
-- default design: private nodes and private GKE API endpoint
-- acceptable demo fallback: public endpoint with explicit authorized access and documented tradeoff
-- never acceptable: broad public Kubernetes API access without a written justification
+This hybrid model was verified from a local workstation on 2026-08-22 with `gcloud container clusters get-credentials --dns-endpoint`, `kubectl cluster-info`, `kubectl get nodes`, and GoLand's Kubernetes integration. It avoids a bastion for routine operator access while retaining the private endpoint needed by the Cloud Run runtime design.
+
+Terraform manages both controls independently:
+
+- `gke_enable_private_endpoint = true` disables the public IP endpoint while retaining the private IP endpoint
+- `gke_enable_dns_endpoint = true` permits IAM-authenticated traffic through the DNS endpoint
+
+For stricter environments, VPC Service Controls can further restrict the DNS endpoint. A public IP endpoint is acceptable only as an intentional fallback with restrictive authorized networks; broad public IP access is not allowed.
 
 ## Cloud Run to GKE API
 
@@ -132,6 +138,8 @@ Default access model:
 - use an Internal Load Balancer only where Cloud Run or trusted operators need network reachability
 - avoid public Grafana or public observability backend endpoints
 
+The DNS endpoint exposes only the Kubernetes API. It does not expose Grafana or the telemetry backends. Operators use the DNS-backed Kubernetes connection with `kubectl port-forward` for the first production verification path.
+
 Cloud Run logs are captured first by Cloud Logging. Later, Task 32a routes structured Cloud Run deployment events through:
 
 ```text
@@ -156,7 +164,7 @@ Workload ingress should be handled by Ingress/Gateway resources rather than gene
 
 Later hardening can add:
 
-- private-only GKE endpoint
+- DNS endpoint restrictions through VPC Service Controls
 - Cloud NAT or stricter egress policy
 - private service access where needed
 - organization policy constraints
@@ -168,11 +176,14 @@ These are not required for the first production demo, but the custom VPC and exp
 
 ## Open Decisions
 
-Task 29 turned the first GKE foundation into Terraform with a private endpoint default. Remaining decisions for later production tasks:
+Task 29 turned the first GKE foundation into Terraform. The operator access and first Grafana access decisions are now closed:
 
-- whether the first live demo keeps the private endpoint or temporarily uses the public endpoint fallback with authorized networks
-- Task 31 first deployment path: run Kubernetes apply commands from a VPN-connected operator workstation, Cloud Workstations environment, bastion VM, or private runner that can reach the private GKE Kubernetes API
-- Task 31 first Grafana access path: private `kubectl port-forward` from that same trusted private-access host
+- operators use the IAM-authenticated GKE DNS endpoint from local workstations, Cloud Shell, or compatible IDEs
+- Cloud Run uses the private IP endpoint through VPC egress
+- Grafana remains private and is reached first through `kubectl port-forward`
+
+Remaining decisions for later production tasks:
+
 - Cloud Run ingress enum
 - Cloud Run VPC egress mode
 - whether Grafana needs an Internal Load Balancer immediately
