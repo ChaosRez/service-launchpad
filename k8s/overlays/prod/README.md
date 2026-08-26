@@ -7,6 +7,8 @@ It changes:
 - namespace: `service-launchpad-prod`
 - namespace environment label: `prod`
 - image source: Artifact Registry instead of the Minikube-local `service-launchpad/fastapi-service:dev`
+- steady-state resource requests: `50m` CPU and `64Mi` memory, while retaining
+  the base limits so the service can burst during load tests
 
 Before applying it to a real production cluster, set the image to the value printed by `scripts/publish-production-images.sh` or by the Terraform `fastapi_service_container_image` output.
 

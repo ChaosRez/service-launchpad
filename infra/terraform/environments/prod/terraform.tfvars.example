@@ -28,6 +28,9 @@ gke_node_service_account_id      = "slp-prod-gke-node"
 # Production GKE shape.
 gke_cluster_enabled         = true
 gke_cluster_name            = "service-launchpad-prod-gke"
+# A zonal Standard cluster qualifies for the GKE free-tier credit. Changing an
+# existing regional cluster to this location replaces the cluster.
+gke_location                = "europe-west10-a"
 gke_deletion_protection     = false
 gke_enable_private_nodes    = true
 gke_enable_private_endpoint = true
@@ -36,8 +39,19 @@ gke_master_ipv4_cidr_block  = "172.16.0.0/28"
 gke_release_channel         = "REGULAR"
 gke_node_locations          = ["europe-west10-a"]
 gke_node_count              = 1
-gke_node_machine_type       = "e2-standard-2"
-gke_node_disk_size_gb       = 50
+gke_node_machine_type       = "e2-medium"
+gke_node_disk_size_gb       = 30
+gke_node_disk_type          = "pd-standard"
+gke_node_spot               = false
+
+# The in-cluster LGTM stack provides workload telemetry. These settings remove
+# the duplicate Google collectors and addons unused by the current manifests.
+gke_cloud_logging_enabled                = false
+gke_cloud_monitoring_enabled             = false
+gke_managed_prometheus_enabled           = false
+gke_http_load_balancing_enabled          = false
+gke_persistent_disk_csi_driver_enabled   = false
+gke_dns_cache_enabled                    = false
 
 # Required if gke_enable_private_endpoint = false. Use the operator/VPN/NAT
 # egress CIDRs that should be allowed to reach the GKE Kubernetes API.

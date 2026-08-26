@@ -5,7 +5,7 @@ module "gke_cluster" {
 
   project_id                    = var.project_id
   name                          = "${local.resource_name_prefix}-gke"
-  region                        = var.region
+  location                      = var.region
   network_self_link             = google_compute_network.dev.self_link
   subnet_self_link              = google_compute_subnetwork.dev.self_link
   pods_secondary_range_name     = "pods"

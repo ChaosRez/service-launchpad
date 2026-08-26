@@ -40,7 +40,13 @@ Public endpoint access is acceptable only as a deliberate demo tradeoff. It shou
 The default node pool is intentionally small:
 
 - `node_count = 1`
-- `node_machine_type = "e2-standard-2"`
-- `node_disk_size_gb = 50`
+- `node_machine_type = "e2-medium"`
+- `node_disk_size_gb = 30`
+- `node_disk_type = "pd-standard"`
+
+The module also exposes Cloud Logging, Cloud Monitoring, Managed Prometheus,
+HTTP load balancing, Persistent Disk CSI, NodeLocal DNSCache, and Spot VM
+switches. Production can disable integrations that duplicate the self-hosted
+LGTM stack, while other callers retain explicit control of those tradeoffs.
 
 Task 31 may need to resize this when the production LGTM stack is deployed.

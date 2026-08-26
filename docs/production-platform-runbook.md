@@ -24,12 +24,12 @@ Configure the local kubeconfig entry:
 ```bash
 gcloud container clusters get-credentials service-launchpad-prod-gke \
   --project geofaas-411316 \
-  --region europe-west10 \
+  --location europe-west10-a \
   --dns-endpoint
 
-kubectl config rename-context \
-  gke_geofaas-411316_europe-west10_service-launchpad-prod-gke \
-  prod-gke
+# Use the generated context directly, or rename it to prod-gke after removing
+# or renaming the old regional-cluster context.
+kubectl config current-context
 ```
 
 Verify the target before any apply:

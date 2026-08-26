@@ -20,6 +20,17 @@ variable "zone" {
   default     = "europe-west10-a"
 }
 
+variable "gke_location" {
+  description = "Optional GKE control-plane region or zone. Use the production zone for the cost-optimized zonal cluster; null keeps a regional cluster. Changing an existing cluster location replaces it."
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.gke_location == null || try(length(trimspace(var.gke_location)) > 0, false)
+    error_message = "gke_location must be null or a non-empty GCP region/zone."
+  }
+}
+
 variable "name_prefix" {
   description = "Short prefix used when naming production cloud resources."
   type        = string
@@ -296,6 +307,42 @@ variable "gke_release_channel" {
   default     = "REGULAR"
 }
 
+variable "gke_cloud_logging_enabled" {
+  description = "Whether GKE exports system logs to Cloud Logging. The cost-optimized profile uses Loki and Promtail instead."
+  type        = bool
+  default     = false
+}
+
+variable "gke_cloud_monitoring_enabled" {
+  description = "Whether GKE exports system metrics to Cloud Monitoring. The cost-optimized profile uses VictoriaMetrics, Mimir, and vmagent instead."
+  type        = bool
+  default     = false
+}
+
+variable "gke_managed_prometheus_enabled" {
+  description = "Whether Google Cloud Managed Service for Prometheus collection is enabled. Keep false while self-hosted metrics are deployed."
+  type        = bool
+  default     = false
+}
+
+variable "gke_http_load_balancing_enabled" {
+  description = "Whether the GKE HTTP load-balancing addon is enabled. The current platform uses only private ClusterIP services."
+  type        = bool
+  default     = false
+}
+
+variable "gke_persistent_disk_csi_driver_enabled" {
+  description = "Whether the GCE Persistent Disk CSI driver addon is enabled. The current manifests use no PersistentVolumeClaims."
+  type        = bool
+  default     = false
+}
+
+variable "gke_dns_cache_enabled" {
+  description = "Whether NodeLocal DNSCache is enabled. It is unnecessary for this one-node, low-traffic platform and changing it recreates nodes."
+  type        = bool
+  default     = false
+}
+
 variable "gke_node_locations" {
   description = "Zones where the production node pool should run. Keep small for the demo production path."
   type        = list(string)
@@ -311,19 +358,25 @@ variable "gke_node_count" {
 variable "gke_node_machine_type" {
   description = "Machine type for the production node pool."
   type        = string
-  default     = "e2-standard-2"
+  default     = "e2-medium"
 }
 
 variable "gke_node_disk_size_gb" {
   description = "Boot disk size for production node pool nodes."
   type        = number
-  default     = 50
+  default     = 30
 }
 
 variable "gke_node_disk_type" {
   description = "Boot disk type for production node pool nodes."
   type        = string
-  default     = "pd-balanced"
+  default     = "pd-standard"
+}
+
+variable "gke_node_spot" {
+  description = "Whether the production node pool uses interruptible Spot VMs. Keep false for the stable cost profile."
+  type        = bool
+  default     = false
 }
 
 variable "gke_node_image_type" {

@@ -10,7 +10,7 @@ output "implementation_status" {
 
 output "cluster_location" {
   description = "GKE cluster location."
-  value       = var.region
+  value       = var.location
 }
 
 output "endpoint" {

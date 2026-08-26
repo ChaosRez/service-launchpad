@@ -11,6 +11,16 @@ images:
 
 patches:
   - target:
+      kind: Deployment
+    patch: |-
+      - op: add
+        path: /spec/strategy
+        value:
+          type: RollingUpdate
+          rollingUpdate:
+            maxSurge: 0
+            maxUnavailable: 1
+  - target:
       kind: Namespace
       name: service-launchpad-observability
     patch: |-
@@ -49,3 +59,83 @@ patches:
               static_configs:
                 - targets:
                     - fastapi-service.service-launchpad-prod.svc.cluster.local:8000
+  - target:
+      kind: Deployment
+      name: grafana
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: 25m
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: 192Mi
+  - target:
+      kind: Deployment
+      name: kube-state-metrics
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: 10m
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: 32Mi
+  - target:
+      kind: Deployment
+      name: loki
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: 25m
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: 96Mi
+  - target:
+      kind: Deployment
+      name: mimir
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: 25m
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: 256Mi
+  - target:
+      kind: Deployment
+      name: tempo
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: 10m
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: 64Mi
+  - target:
+      kind: Deployment
+      name: victoriametrics
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: 25m
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: 96Mi
+  - target:
+      kind: Deployment
+      name: vmagent
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: 10m
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: 64Mi
+  - target:
+      kind: DaemonSet
+      name: promtail
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: 20m
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: 64Mi

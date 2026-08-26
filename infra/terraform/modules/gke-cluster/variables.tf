@@ -20,8 +20,8 @@ variable "description" {
   default     = "Service Launchpad GKE cluster."
 }
 
-variable "region" {
-  description = "Regional location for the GKE cluster."
+variable "location" {
+  description = "Region or zone for the GKE cluster control plane. Use a zone for a lower-cost, lower-SLA Standard cluster."
   type        = string
 }
 
@@ -111,6 +111,42 @@ variable "release_channel" {
   }
 }
 
+variable "cloud_logging_enabled" {
+  description = "Whether GKE exports system logs to Cloud Logging. Disable when an in-cluster log stack provides the required coverage."
+  type        = bool
+  default     = true
+}
+
+variable "cloud_monitoring_enabled" {
+  description = "Whether GKE exports system metrics to Cloud Monitoring. Disable when an in-cluster metrics stack provides the required coverage."
+  type        = bool
+  default     = true
+}
+
+variable "managed_prometheus_enabled" {
+  description = "Whether Google Cloud Managed Service for Prometheus collection is enabled."
+  type        = bool
+  default     = false
+}
+
+variable "http_load_balancing_enabled" {
+  description = "Whether the GKE HTTP load-balancing addon is enabled."
+  type        = bool
+  default     = true
+}
+
+variable "gce_persistent_disk_csi_driver_enabled" {
+  description = "Whether the GCE Persistent Disk CSI driver addon is enabled."
+  type        = bool
+  default     = true
+}
+
+variable "dns_cache_enabled" {
+  description = "Whether NodeLocal DNSCache is enabled. Changing this setting recreates cluster nodes."
+  type        = bool
+  default     = false
+}
+
 variable "node_pool_name" {
   description = "Name of the primary GKE node pool."
   type        = string
@@ -137,13 +173,13 @@ variable "node_count" {
 variable "node_machine_type" {
   description = "Machine type for the primary node pool."
   type        = string
-  default     = "e2-standard-2"
+  default     = "e2-medium"
 }
 
 variable "node_disk_size_gb" {
   description = "Boot disk size for primary node pool nodes."
   type        = number
-  default     = 50
+  default     = 30
 
   validation {
     condition     = var.node_disk_size_gb >= 30
@@ -154,7 +190,13 @@ variable "node_disk_size_gb" {
 variable "node_disk_type" {
   description = "Boot disk type for primary node pool nodes."
   type        = string
-  default     = "pd-balanced"
+  default     = "pd-standard"
+}
+
+variable "node_spot" {
+  description = "Whether the primary node pool uses interruptible Spot VMs. Keep false for serving and stateful workloads."
+  type        = bool
+  default     = false
 }
 
 variable "node_image_type" {

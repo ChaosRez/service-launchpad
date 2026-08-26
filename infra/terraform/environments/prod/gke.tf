@@ -6,7 +6,7 @@ module "gke_cluster" {
   project_id                    = var.project_id
   name                          = coalesce(var.gke_cluster_name, "${local.resource_name_prefix}-gke")
   description                   = "Production GKE cluster for Service Launchpad workloads and self-hosted LGTM observability."
-  region                        = var.region
+  location                      = local.gke_location
   network_self_link             = google_compute_network.prod.self_link
   subnet_self_link              = google_compute_subnetwork.prod.self_link
   pods_secondary_range_name     = "pods"
@@ -20,6 +20,13 @@ module "gke_cluster" {
   master_ipv4_cidr_block     = var.gke_master_ipv4_cidr_block
   master_authorized_networks = var.gke_master_authorized_networks
   release_channel            = var.gke_release_channel
+  cloud_logging_enabled      = var.gke_cloud_logging_enabled
+  cloud_monitoring_enabled   = var.gke_cloud_monitoring_enabled
+  managed_prometheus_enabled = var.gke_managed_prometheus_enabled
+
+  http_load_balancing_enabled            = var.gke_http_load_balancing_enabled
+  gce_persistent_disk_csi_driver_enabled = var.gke_persistent_disk_csi_driver_enabled
+  dns_cache_enabled                      = var.gke_dns_cache_enabled
 
   node_pool_name             = "primary"
   node_locations             = var.gke_node_locations
@@ -28,6 +35,7 @@ module "gke_cluster" {
   node_disk_size_gb          = var.gke_node_disk_size_gb
   node_disk_type             = var.gke_node_disk_type
   node_image_type            = var.gke_node_image_type
+  node_spot                  = var.gke_node_spot
   node_service_account_email = google_service_account.gke_node.email
 
   depends_on = [

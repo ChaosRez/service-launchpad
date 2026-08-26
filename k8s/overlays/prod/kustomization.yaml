@@ -26,3 +26,13 @@ patches:
       - op: replace
         path: /metadata/labels/app.kubernetes.io~1environment
         value: prod
+  - target:
+      kind: Deployment
+      name: fastapi-service
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: 50m
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: 64Mi

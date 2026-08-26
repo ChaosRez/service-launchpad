@@ -41,11 +41,19 @@ Production should differ from local Minikube and the current dev cloud foundatio
 - Cloud Run logs are captured by Cloud Logging and later routed to Loki through Pub/Sub and a GKE collector
 - deployment audit artifacts are written to a production GCS artifact bucket
 
-The first GKE configuration is cost-aware:
+The cost-optimized GKE configuration is documented in
+[../../../../docs/production-cost-optimization.md](../../../../docs/production-cost-optimization.md).
+Its steady-state shape is:
 
 - one selected node location by default
 - one node per selected node location
-- `e2-standard-2` node type by default
+- a zonal Standard control plane so the cluster-management charge can use the
+  eligible monthly GKE free-tier credit
+- `e2-medium` node type by default
+- a 30 GB `pd-standard` node boot disk
+- duplicate Cloud Logging, Cloud Monitoring, and Managed Prometheus collectors disabled
+- unused HTTP load-balancing, PD CSI, and NodeLocal DNSCache addons disabled
+- on-demand capacity by default; Spot remains an explicit interruption tradeoff
 - private nodes enabled by default
 - private IP Kubernetes API endpoint enabled for Cloud Run VPC access
 - IAM-authenticated DNS endpoint enabled for operators, Cloud Shell, and compatible IDEs

@@ -5,6 +5,7 @@ locals {
   artifact_image_prefix = "${var.region}-docker.pkg.dev/${var.project_id}/${var.artifact_registry_repository_id}"
   control_plane_image   = "${local.artifact_image_prefix}/control-plane:${var.production_image_tag}"
   fastapi_service_image = "${local.artifact_image_prefix}/fastapi-service:${var.production_image_tag}"
+  gke_location          = coalesce(var.gke_location, var.region)
 
   common_labels = merge(
     {

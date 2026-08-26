@@ -7,7 +7,7 @@ resource "google_container_cluster" "this" {
 
   project  = var.project_id
   name     = var.name
-  location = var.region
+  location = var.location
 
   description = var.description
 
@@ -56,13 +56,25 @@ resource "google_container_cluster" "this" {
     channel = var.release_channel
   }
 
+  logging_config {
+    enable_components = var.cloud_logging_enabled ? ["SYSTEM_COMPONENTS"] : []
+  }
+
+  monitoring_config {
+    enable_components = var.cloud_monitoring_enabled ? ["SYSTEM_COMPONENTS"] : []
+
+    managed_prometheus {
+      enabled = var.managed_prometheus_enabled
+    }
+  }
+
   workload_identity_config {
     workload_pool = "${var.project_id}.svc.id.goog"
   }
 
   addons_config {
     http_load_balancing {
-      disabled = false
+      disabled = !var.http_load_balancing_enabled
     }
 
     horizontal_pod_autoscaling {
@@ -70,7 +82,11 @@ resource "google_container_cluster" "this" {
     }
 
     gce_persistent_disk_csi_driver_config {
-      enabled = true
+      enabled = var.gce_persistent_disk_csi_driver_enabled
+    }
+
+    dns_cache_config {
+      enabled = var.dns_cache_enabled
     }
   }
 
@@ -82,7 +98,7 @@ resource "google_container_node_pool" "primary" {
 
   project  = var.project_id
   name     = var.node_pool_name
-  location = var.region
+  location = var.location
   cluster  = google_container_cluster.this[0].name
 
   node_locations = var.node_locations
@@ -99,6 +115,7 @@ resource "google_container_node_pool" "primary" {
     disk_size_gb    = var.node_disk_size_gb
     disk_type       = var.node_disk_type
     image_type      = var.node_image_type
+    spot            = var.node_spot
 
     labels = var.labels
 
