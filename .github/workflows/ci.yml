@@ -94,6 +94,24 @@ jobs:
         with:
           version: v1.34.1
 
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v4.3.1
+
+      - name: Lint fastapi-service Helm chart
+        run: helm lint charts/fastapi-service --strict
+
+      - name: Render fastapi-service Helm chart
+        run: |
+          helm template fastapi-service charts/fastapi-service \
+            --namespace service-launchpad-dev \
+            >"${RUNNER_TEMP}/service-launchpad-helm-dev.yaml"
+          helm template fastapi-service charts/fastapi-service \
+            --namespace service-launchpad-prod \
+            --values charts/fastapi-service/values-prod.yaml \
+            >"${RUNNER_TEMP}/service-launchpad-helm-prod.yaml"
+
       - name: Render base manifests
         run: kubectl kustomize k8s/base >"${RUNNER_TEMP}/service-launchpad-base.yaml"
 
@@ -141,3 +159,13 @@ jobs:
             -strict \
             -summary \
             /manifests/service-launchpad-prod-observability.yaml
+
+      - name: Validate fastapi-service Helm renders
+        run: |
+          docker run --rm \
+            -v "${RUNNER_TEMP}:/manifests:ro" \
+            ghcr.io/yannh/kubeconform:v0.6.7 \
+            -strict \
+            -summary \
+            /manifests/service-launchpad-helm-dev.yaml \
+            /manifests/service-launchpad-helm-prod.yaml

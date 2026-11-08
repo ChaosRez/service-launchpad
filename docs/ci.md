@@ -18,7 +18,9 @@ The goal is quick, secret-free validation of the current repository surfaces: Go
 - Kustomize rendering for `k8s/base` and `k8s/monitoring`
 - Kustomize rendering for the production workload overlay at `k8s/overlays/prod`
 - Kustomize rendering for the production observability overlay at `k8s/overlays/prod-observability`
-- Offline Kubernetes schema validation for rendered manifests with `kubeconform`
+- `helm lint --strict` for `charts/fastapi-service`
+- `helm template` for the chart with default values and with `values-prod.yaml`
+- Offline Kubernetes schema validation for rendered manifests (Kustomize and Helm) with `kubeconform`
 
 ## Deferred
 
