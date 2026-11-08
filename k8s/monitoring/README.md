@@ -54,7 +54,7 @@ kubectl port-forward svc/loki 3100:3100 -n service-launchpad-observability
 - trace export is configured through the `fastapi-service` ConfigMap in `k8s/base`
 - `promtail` tails Kubernetes pod logs from `/var/log/pods` and ships them to `Loki` with pod metadata labels
 - the Promtail DaemonSet exports `HOSTNAME` from the Kubernetes node name so pod discovery only keeps log files local to each node
-- log-to-trace correlation requires applications to include a `trace_id` in their log lines
+- log-to-trace correlation requires applications to include a `trace_id` in their log lines. `fastapi-service` writes JSON lines with `trace_id`/`span_id` (one line per request; probes and `/metrics` are skipped). The `Loki` datasource has a `TraceID` derived field that matches `"trace_id":"<32 hex>"` and links to the `Tempo` datasource. In Explore, run `{namespace="service-launchpad-dev", app="fastapi-service"} | json | duration_ms > 1000` to find slow requests, then open the trace from the log line
 - the starter dashboards include:
   - `FastAPI Service Observability` for application latency, errors, SLOs, and replicas
   - `Control Plane Observability` for scrape health, managed service count, registrations, deployments, and deployment duration
