@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import json
+import logging
 import os
+import sys
 import time
 import uuid
 from typing import Literal
@@ -25,6 +28,7 @@ CPU_WORK_UNITS = {"short": 2_000, "medium": 25_000, "long": 120_000}
 DEFAULT_RUNTIME_PROFILE = os.getenv("FASTAPI_SERVICE_DEFAULT_PROFILE", "medium")
 OTEL_SERVICE_NAME = os.getenv("OTEL_SERVICE_NAME", "fastapi-service")
 OTEL_EXPORTER_OTLP_TRACES_ENDPOINT = os.getenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "").strip()
+LOG_LEVEL = os.getenv("FASTAPI_SERVICE_LOG_LEVEL", "INFO").upper()
 if DEFAULT_RUNTIME_PROFILE not in RUNTIME_PROFILES:
     DEFAULT_RUNTIME_PROFILE = "medium"
 
@@ -52,9 +56,55 @@ ERROR_COUNT = Counter(
 )
 
 
+class JsonLogFormatter(logging.Formatter):
+    """One JSON object per line, with trace_id/span_id from the current OTel span.
+
+    Loki (via Promtail) stores the line as-is; the Grafana Loki datasource turns
+    the trace_id field into a link to the Tempo datasource.
+    """
+
+    def format(self, record: logging.LogRecord) -> str:
+        entry = {
+            "timestamp": self.formatTime(record, "%Y-%m-%dT%H:%M:%S") + f".{int(record.msecs):03d}Z",
+            "level": record.levelname,
+            "logger": record.name,
+            "service": OTEL_SERVICE_NAME,
+            "message": record.getMessage(),
+        }
+        entry.update(getattr(record, "fields", {}))
+        span_context = trace.get_current_span().get_span_context()
+        if span_context.is_valid:
+            entry["trace_id"] = format(span_context.trace_id, "032x")
+            entry["span_id"] = format(span_context.span_id, "016x")
+        if record.exc_info:
+            entry["exception"] = self.formatException(record.exc_info)
+        return json.dumps(entry, separators=(",", ":"))
+
+
+JsonLogFormatter.converter = time.gmtime
+
+
+def _configure_logging() -> logging.Logger:
+    logger = logging.getLogger("fastapi_service")
+    if not logger.handlers:
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setFormatter(JsonLogFormatter())
+        logger.addHandler(handler)
+    logger.setLevel(LOG_LEVEL if LOG_LEVEL in logging.getLevelNamesMapping() else "INFO")
+    logger.propagate = False
+    return logger
+
+
+logger = _configure_logging()
+
+
 class ChatCompletionRequest(BaseModel):
     runtime_profile: Literal["short", "medium", "long"] = DEFAULT_RUNTIME_PROFILE
     stream: bool = False
+
+
+# Probe and scrape endpoints are hit every few seconds and are not traced.
+ACCESS_LOG_EXCLUDED_PATHS = frozenset({"/health", "/ready", "/metrics"})
 
 
 @app.middleware("http")
@@ -77,6 +127,19 @@ async def record_metrics(request: Request, call_next) -> Response:
 
         if response is None or response.status_code >= 400:
             ERROR_COUNT.labels(method=method, path=path, status=status_code).inc(exemplar=exemplar)
+
+        if path not in ACCESS_LOG_EXCLUDED_PATHS:
+            logger.info(
+                "request completed",
+                extra={
+                    "fields": {
+                        "method": method,
+                        "path": path,
+                        "status": int(status_code),
+                        "duration_ms": round(elapsed * 1000, 1),
+                    }
+                },
+            )
 
 
 @app.get("/health")

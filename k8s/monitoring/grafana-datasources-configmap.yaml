@@ -46,3 +46,11 @@ data:
         url: http://loki.service-launchpad-observability.svc.cluster.local:3100
         jsonData:
           maxLines: 1000
+          # fastapi-service writes JSON log lines with a 32-hex-char trace_id.
+          # `$$` escapes Grafana's env-var interpolation in provisioning files.
+          derivedFields:
+            - name: TraceID
+              matcherRegex: '"trace_id":"([0-9a-f]{32})"'
+              datasourceUid: tempo
+              url: '$${__value.raw}'
+              urlDisplayLabel: View trace in Tempo

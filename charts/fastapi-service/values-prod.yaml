@@ -1,0 +1,16 @@
+# Mirrors k8s/overlays/prod for the workload: Artifact Registry image and smaller
+# requests for the low-cost production node pool. Rendered and validated in CI
+# only; it has not been installed on GKE.
+#   helm upgrade --install fastapi-service charts/fastapi-service \
+#     -n service-launchpad-prod -f charts/fastapi-service/values-prod.yaml
+image:
+  repository: europe-west10-docker.pkg.dev/geofaas-411316/service-launchpad/fastapi-service
+  tag: prod
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 1000m
+    memory: 256Mi

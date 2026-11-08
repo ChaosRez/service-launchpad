@@ -1,0 +1,9 @@
+apiVersion: v2
+name: fastapi-service
+description: Service Launchpad sample workload (FastAPI chat-completion simulator) - Deployment, Service, ConfigMap and HPA.
+type: application
+version: 0.1.0
+appVersion: "0.3.0"
+keywords:
+  - fastapi
+  - service-launchpad

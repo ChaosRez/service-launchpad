@@ -39,6 +39,16 @@ export OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://localhost:4318/v1/traces
 
 The chat completion response includes a `simulation.trace_id` field that can be used to find the request in Grafana Explore with the `Tempo` datasource.
 
+## Logging
+
+The service writes one JSON line to stdout per request (except `/health`, `/ready`, `/metrics`). Each line carries the active OpenTelemetry `trace_id` and `span_id`, so a log line in Loki links to the same trace in Tempo:
+
+```json
+{"timestamp":"2026-11-08T20:03:34.145Z","level":"INFO","logger":"fastapi_service","service":"fastapi-service","message":"request completed","method":"POST","path":"/v1/chat/completions","status":200,"duration_ms":383.6,"trace_id":"bbde81d1d1a0281711d55e0d1c724a84","span_id":"2161d1d77960709a"}
+```
+
+The `trace_id` in the log line is the same as `simulation.trace_id` in the response. `tests/test_app.py` checks this. Set the level with `FASTAPI_SERVICE_LOG_LEVEL` (default `INFO`). The container runs uvicorn with `--no-access-log` so its plain-text access log does not duplicate these lines.
+
 When `VictoriaMetrics` is the metrics backend, Grafana trace drilldown is not the same as exemplar-backed Prometheus/Mimir workflows. For this stack, use:
 - Grafana Explore with the `Tempo` datasource and `simulation.trace_id`
 - Grafana correlations, if you want explicit navigation from metric views toward traces
@@ -67,6 +77,13 @@ Build the image into Minikube's Docker daemon first, then apply the base manifes
 eval $(minikube -p service-launchpad docker-env)
 docker build -t service-launchpad/fastapi-service:dev services/fastapi-service
 kubectl apply -k k8s/base
+```
+
+Or install the same resources with the Helm chart (see `charts/fastapi-service/README.md`). Use either Kustomize or Helm in a given namespace, not both:
+
+```bash
+helm upgrade --install fastapi-service charts/fastapi-service \
+  --kube-context dev-k3s -n service-launchpad-dev --create-namespace --wait
 ```
 
 Quick sanity check:

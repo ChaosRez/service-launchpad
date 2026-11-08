@@ -1,0 +1,5 @@
+{{ include "fastapi-service.fullname" . }} {{ .Chart.AppVersion }} installed in namespace {{ .Release.Namespace }} (image {{ .Values.image.repository }}:{{ .Values.image.tag }}).
+
+  kubectl -n {{ .Release.Namespace }} rollout status deployment/{{ include "fastapi-service.fullname" . }}
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "fastapi-service.fullname" . }} {{ .Values.service.port }}:{{ .Values.service.port }}
+  curl -s localhost:{{ .Values.service.port }}/health
