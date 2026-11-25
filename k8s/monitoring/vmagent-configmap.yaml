@@ -35,6 +35,8 @@ data:
               - fastapi-service.service-launchpad-dev.svc.cluster.local:8000
       # One target per recommendation-service pod via the headless Service, so per-pod CPU,
       # event-loop lag, and latency stay correct while the HPA adds and removes pods.
+      # DNS re-resolution interval is the global -promscrape.dnsSDCheckInterval flag (default
+      # 30s); vmagent rejects a per-job refresh_interval here.
       - job_name: recommendation-service
         metrics_path: /metrics
         dns_sd_configs:
@@ -42,7 +44,6 @@ data:
               - recommendation-service-metrics.service-launchpad-reco.svc.cluster.local
             type: A
             port: 8080
-            refresh_interval: 15s
       - job_name: valkey
         static_configs:
           - targets:
