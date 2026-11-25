@@ -24,6 +24,8 @@ spec:
           image: victoriametrics/vmagent:v1.102.1
           args:
             - -promscrape.config=/etc/vmagent/prometheus.yml
+            # Re-read the scrape config when the ConfigMap changes; no restart needed.
+            - -promscrape.configCheckInterval=30s
             - -remoteWrite.url=http://victoriametrics.service-launchpad-observability.svc.cluster.local:8428/api/v1/write
             - -remoteWrite.url=http://mimir.service-launchpad-observability.svc.cluster.local:9009/api/v1/push
             - -remoteWrite.tmpDataPath=/vmagent-data

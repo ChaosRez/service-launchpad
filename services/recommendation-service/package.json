@@ -1,0 +1,26 @@
+{
+  "name": "recommendation-service",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Minimal recommendation feed service: Valkey-backed model outputs, multi-tier cache, fallback chain, diversity re-ranking, and A/B bucketing.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "seed": "node dist/seed.js",
+    "test": "tsc -p tsconfig.json && node --test \"dist/**/*.test.js\""
+  },
+  "dependencies": {
+    "fastify": "5.12.8",
+    "ioredis": "5.8.2",
+    "lru-cache": "11.2.2",
+    "prom-client": "15.1.3"
+  },
+  "devDependencies": {
+    "@types/node": "22.18.8",
+    "typescript": "5.9.3"
+  }
+}

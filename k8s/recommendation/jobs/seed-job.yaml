@@ -1,0 +1,44 @@
+# Reverse-ETL load: writes a new model-output version into Valkey and flips reco:active.
+# Uses generateName so every run is a new Job; apply with `kubectl create -f`, not `apply`.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  generateName: reco-seed-
+  namespace: service-launchpad-reco
+  labels:
+    app.kubernetes.io/name: reco-seed
+    app.kubernetes.io/component: reverse-etl
+    app.kubernetes.io/part-of: service-launchpad
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: reco-seed
+        app.kubernetes.io/component: reverse-etl
+        app.kubernetes.io/part-of: service-launchpad
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: seed
+          image: service-launchpad/recommendation-service:dev
+          imagePullPolicy: IfNotPresent
+          command: ["node", "dist/seed.js"]
+          env:
+            - name: VALKEY_URL
+              value: redis://valkey.service-launchpad-reco.svc.cluster.local:6379
+            - name: SEED_USERS
+              value: "20000"
+            - name: SEED_PRODUCTS
+              value: "5000"
+          resources:
+            requests:
+              cpu: 500m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi

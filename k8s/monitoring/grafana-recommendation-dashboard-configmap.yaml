@@ -1,0 +1,1433 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-recommendation-dashboard
+  namespace: service-launchpad-observability
+  labels:
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/part-of: service-launchpad
+data:
+  recommendation-service.json: |
+    {
+      "annotations": {
+        "list": []
+      },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 1,
+      "links": [],
+      "panels": [
+        {
+          "type": "row",
+          "title": "Service level",
+          "id": 1,
+          "collapsed": false,
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 0
+          },
+          "panels": []
+        },
+        {
+          "type": "stat",
+          "title": "Served RPS",
+          "description": "Server-side request rate across all pods.",
+          "id": 2,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 4,
+            "x": 0,
+            "y": 1
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "color": {
+                "mode": "thresholds"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "colorMode": "value",
+            "graphMode": "area",
+            "textMode": "auto",
+            "justifyMode": "auto",
+            "orientation": "auto"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "editorMode": "code",
+              "expr": "sum(rate(reco_http_request_duration_seconds_count{job=\"recommendation-service\"}[1m]))",
+              "legendFormat": "rps",
+              "refId": "A",
+              "range": true
+            }
+          ]
+        },
+        {
+          "type": "stat",
+          "title": "p99 latency (server)",
+          "description": "SLO: p99 < 50 ms.",
+          "id": 3,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 4,
+            "x": 4,
+            "y": 1
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "orange",
+                    "value": 0.025
+                  },
+                  {
+                    "color": "red",
+                    "value": 0.05
+                  }
+                ]
+              },
+              "color": {
+                "mode": "thresholds"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "colorMode": "value",
+            "graphMode": "area",
+            "textMode": "auto",
+            "justifyMode": "auto",
+            "orientation": "auto"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "editorMode": "code",
+              "expr": "histogram_quantile(0.99, sum by (le) (rate(reco_http_request_duration_seconds_bucket{job=\"recommendation-service\"}[1m])))",
+              "legendFormat": "p99",
+              "refId": "A",
+              "range": true
+            }
+          ]
+        },
+        {
+          "type": "stat",
+          "title": "5xx rate",
+          "description": "",
+          "id": 4,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 4,
+            "x": 8,
+            "y": 1
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 0.001
+                  }
+                ]
+              },
+              "color": {
+                "mode": "thresholds"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "colorMode": "value",
+            "graphMode": "area",
+            "textMode": "auto",
+            "justifyMode": "auto",
+            "orientation": "auto"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "editorMode": "code",
+              "expr": "(sum(rate(reco_http_request_duration_seconds_count{job=\"recommendation-service\",status=~\"5..\"}[1m])) or vector(0)) / clamp_min(sum(rate(reco_http_request_duration_seconds_count{job=\"recommendation-service\"}[1m])), 1e-9)",
+              "legendFormat": "5xx",
+              "refId": "A",
+              "range": true
+            }
+          ]
+        },
+        {
+          "type": "stat",
+          "title": "Replicas",
+          "description": "Current replica count reported by the HPA.",
+          "id": 5,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 4,
+            "x": 12,
+            "y": 1
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "color": {
+                "mode": "thresholds"
+              },
+              "decimals": 0
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "colorMode": "value",
+            "graphMode": "area",
+            "textMode": "auto",
+            "justifyMode": "auto",
+            "orientation": "auto"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "editorMode": "code",
+              "expr": "kube_horizontalpodautoscaler_status_current_replicas{namespace=\"service-launchpad-reco\",horizontalpodautoscaler=\"recommendation-service\"}",
+              "legendFormat": "replicas",
+              "refId": "A",
+              "range": true
+            }
+          ]
+        },
+        {
+          "type": "stat",
+          "title": "Personalized coverage (home)",
+          "description": "Share of home feeds served from the user's own model output, rather than a fallback. Load mix expects ~80%.",
+          "id": 6,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 4,
+            "x": 16,
+            "y": 1
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "orange",
+                    "value": 0.5
+                  },
+                  {
+                    "color": "green",
+                    "value": 0.7
+                  }
+                ]
+              },
+              "color": {
+                "mode": "thresholds"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "colorMode": "value",
+            "graphMode": "area",
+            "textMode": "auto",
+            "justifyMode": "auto",
+            "orientation": "auto"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "editorMode": "code",
+              "expr": "sum(rate(reco_feed_served_total{surface=\"home\",source=\"personalized\"}[5m])) / clamp_min(sum(rate(reco_feed_served_total{surface=\"home\"}[5m])), 1e-9)",
+              "legendFormat": "coverage",
+              "refId": "A",
+              "range": true
+            }
+          ]
+        },
+        {
+          "type": "stat",
+          "title": "Model version",
+          "description": "reco:active version served by the pods.",
+          "id": 7,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 4,
+            "x": 20,
+            "y": 1
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "color": {
+                "mode": "thresholds"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "colorMode": "value",
+            "graphMode": "area",
+            "textMode": "name",
+            "justifyMode": "auto",
+            "orientation": "auto"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "editorMode": "code",
+              "expr": "max by (version) (reco_model_version_info)",
+              "legendFormat": "{{version}}",
+              "refId": "A",
+              "range": false,
+              "instant": true
+            }
+          ]
+        },
+        {
+          "type": "row",
+          "title": "Load and autoscaling",
+          "id": 8,
+          "collapsed": false,
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 5
+          },
+          "panels": []
+        },
+        {
+          "type": "timeseries",
+          "title": "Offered vs served load",
+          "description": "constant-arrival-rate: if the service cannot keep up, k6 drops iterations instead of silently slowing down.",
+          "id": 9,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 6
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                }
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "k6 dropped iterations"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "red"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "editorMode": "code",
+              "expr": "sum(rate(k6_http_reqs_total{testid=\"reco-constant\"}[1m]))",
+              "legendFormat": "k6 offered",
+              "refId": "A",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "editorMode": "code",
+              "expr": "sum(rate(reco_http_request_duration_seconds_count{job=\"recommendation-service\"}[1m]))",
+              "legendFormat": "service served",
+              "refId": "B",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "editorMode": "code",
+              "expr": "sum(rate(k6_dropped_iterations_total{testid=\"reco-constant\"}[1m]))",
+              "legendFormat": "k6 dropped iterations",
+              "refId": "C",
+              "range": true
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Latency vs SLO",
+          "description": "Server histograms vs the client-observed p99. The gap is network, queueing in the event loop, and kube-proxy.",
+          "id": 10,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 6
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 0,
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                }
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "SLO 50 ms"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "red"
+                    }
+                  },
+                  {
+                    "id": "custom.lineStyle",
+                    "value": {
+                      "fill": "dash",
+                      "dash": [
+                        8,
+                        6
+                      ]
+                    }
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "editorMode": "code",
+              "expr": "histogram_quantile(0.50, sum by (le) (rate(reco_http_request_duration_seconds_bucket{job=\"recommendation-service\"}[1m])))",
+              "legendFormat": "server p50",
+              "refId": "A",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "editorMode": "code",
+              "expr": "histogram_quantile(0.99, sum by (le) (rate(reco_http_request_duration_seconds_bucket{job=\"recommendation-service\"}[1m])))",
+              "legendFormat": "server p99",
+              "refId": "B",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "editorMode": "code",
+              "expr": "max(k6_http_req_duration_p99{testid=\"reco-constant\"})",
+              "legendFormat": "client p99 (k6)",
+              "refId": "C",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "editorMode": "code",
+              "expr": "vector(0.05)",
+              "legendFormat": "SLO 50 ms",
+              "refId": "D",
+              "range": true
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "HPA replicas",
+          "description": "",
+          "id": 11,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 0,
+            "y": 14
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 0,
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                }
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "max"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "red"
+                    }
+                  },
+                  {
+                    "id": "custom.lineStyle",
+                    "value": {
+                      "fill": "dash",
+                      "dash": [
+                        8,
+                        6
+                      ]
+                    }
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "editorMode": "code",
+              "expr": "kube_horizontalpodautoscaler_status_current_replicas{namespace=\"service-launchpad-reco\",horizontalpodautoscaler=\"recommendation-service\"}",
+              "legendFormat": "current",
+              "refId": "A",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "editorMode": "code",
+              "expr": "kube_horizontalpodautoscaler_status_desired_replicas{namespace=\"service-launchpad-reco\",horizontalpodautoscaler=\"recommendation-service\"}",
+              "legendFormat": "desired",
+              "refId": "B",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "editorMode": "code",
+              "expr": "kube_horizontalpodautoscaler_spec_max_replicas{namespace=\"service-launchpad-reco\",horizontalpodautoscaler=\"recommendation-service\"}",
+              "legendFormat": "max",
+              "refId": "C",
+              "range": true
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "CPU per pod",
+          "description": "HPA scales on CPU relative to the request (200m). Target utilisation 50% = 100m per pod.",
+          "id": 12,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 8,
+            "y": 14
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "cores",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 0,
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                }
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "HPA target (50% of 200m)"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "red"
+                    }
+                  },
+                  {
+                    "id": "custom.lineStyle",
+                    "value": {
+                      "fill": "dash",
+                      "dash": [
+                        8,
+                        6
+                      ]
+                    }
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "editorMode": "code",
+              "expr": "rate(process_cpu_seconds_total{job=\"recommendation-service\"}[1m])",
+              "legendFormat": "{{instance}}",
+              "refId": "A",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "editorMode": "code",
+              "expr": "vector(0.1)",
+              "legendFormat": "HPA target (50% of 200m)",
+              "refId": "B",
+              "range": true
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Event-loop lag p99 per pod",
+          "description": "The first saturation signal for a single-threaded Node process; it usually rises before CPU reaches the limit.",
+          "id": 13,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 16,
+            "y": 14
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 0,
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                }
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "editorMode": "code",
+              "expr": "nodejs_eventloop_lag_p99_seconds{job=\"recommendation-service\"}",
+              "legendFormat": "{{instance}}",
+              "refId": "A",
+              "range": true
+            }
+          ]
+        },
+        {
+          "type": "row",
+          "title": "Recommendation quality and experiment",
+          "id": 14,
+          "collapsed": false,
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 22
+          },
+          "panels": []
+        },
+        {
+          "type": "timeseries",
+          "title": "Feed source (fallback chain)",
+          "description": "Which stage of personalized/similar -> popular -> static actually served each feed. A rise in static means the hot store is unavailable.",
+          "id": 15,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 0,
+            "y": 23
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "mode": "percent",
+                  "group": "A"
+                }
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "editorMode": "code",
+              "expr": "sum by (source) (rate(reco_feed_served_total[1m]))",
+              "legendFormat": "{{source}}",
+              "refId": "A",
+              "range": true
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Distinct brands per home feed (A/B)",
+          "description": "Treatment 'diverse' applies a brand cap during re-ranking; control keeps pure model order.",
+          "id": 16,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 8,
+            "y": 23
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 0,
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                }
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "editorMode": "code",
+              "expr": "sum by (variant) (rate(reco_feed_distinct_brands_sum{surface=\"home\",variant!=\"none\"}[5m])) / sum by (variant) (rate(reco_feed_distinct_brands_count{surface=\"home\",variant!=\"none\"}[5m]))",
+              "legendFormat": "{{variant}}",
+              "refId": "A",
+              "range": true
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Experiment exposure and backfill",
+          "description": "Exposure should split ~50/50 between control and diverse. Backfill = primary list too short after dedupe/exclusions.",
+          "id": 17,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 16,
+            "y": 23
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 0,
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                }
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "editorMode": "code",
+              "expr": "sum by (variant) (rate(reco_feed_served_total[1m]))",
+              "legendFormat": "exposure {{variant}}",
+              "refId": "A",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "editorMode": "code",
+              "expr": "sum by (surface) (rate(reco_feed_backfilled_total[1m]))",
+              "legendFormat": "backfilled {{surface}}",
+              "refId": "B",
+              "range": true
+            }
+          ]
+        },
+        {
+          "type": "row",
+          "title": "Cache tiers and Valkey",
+          "id": 18,
+          "collapsed": false,
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 31
+          },
+          "panels": []
+        },
+        {
+          "type": "timeseries",
+          "title": "L1 hit ratio by keyspace",
+          "description": "In-process tier; hit includes stale and coalesced (no Valkey read of its own). 'similar' warms per pod; new pods start cold, which is visible right after a scale-out.",
+          "id": 19,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 0,
+            "y": 32
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 0,
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                }
+              },
+              "min": 0,
+              "max": 1
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "editorMode": "code",
+              "expr": "sum by (keyspace) (rate(reco_cache_requests_total{tier=\"l1\",result=~\"hit|stale|coalesced\"}[1m])) / sum by (keyspace) (rate(reco_cache_requests_total{tier=\"l1\"}[1m]))",
+              "legendFormat": "{{keyspace}}",
+              "refId": "A",
+              "range": true
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "L1 stale / error lookups",
+          "description": "stale = served the last good value while Valkey was failing or a refresh was in flight.",
+          "id": 20,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 6,
+            "y": 32
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 0,
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                }
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "editorMode": "code",
+              "expr": "sum by (keyspace, result) (rate(reco_cache_requests_total{tier=\"l1\",result=~\"stale|error\"}[1m]))",
+              "legendFormat": "{{keyspace}} {{result}}",
+              "refId": "A",
+              "range": true
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Valkey read latency p99",
+          "description": "Client-side latency incl. auto-pipelining. Command timeout is 25 ms.",
+          "id": 21,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 12,
+            "y": 32
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 0,
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                }
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "circuit open"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "none"
+                  },
+                  {
+                    "id": "custom.axisPlacement",
+                    "value": "right"
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "red"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "editorMode": "code",
+              "expr": "histogram_quantile(0.99, sum by (le, keyspace) (rate(reco_valkey_command_duration_seconds_bucket{outcome=\"ok\"}[1m])))",
+              "legendFormat": "{{keyspace}}",
+              "refId": "A",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "editorMode": "code",
+              "expr": "max(reco_valkey_circuit_open)",
+              "legendFormat": "circuit open",
+              "refId": "B",
+              "range": true
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Valkey server",
+          "description": "Auto-pipelining keeps commands/s well below request rate x reads per request.",
+          "id": 22,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 18,
+            "y": 32
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 0,
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                }
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "memory used"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "bytes"
+                  },
+                  {
+                    "id": "custom.axisPlacement",
+                    "value": "right"
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "editorMode": "code",
+              "expr": "sum(rate(redis_commands_processed_total{job=\"valkey\"}[1m]))",
+              "legendFormat": "commands/s",
+              "refId": "A",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "editorMode": "code",
+              "expr": "sum(redis_memory_used_bytes{job=\"valkey\"})",
+              "legendFormat": "memory used",
+              "refId": "B",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "editorMode": "code",
+              "expr": "sum(redis_connected_clients{job=\"valkey\"})",
+              "legendFormat": "clients",
+              "refId": "C",
+              "range": true
+            }
+          ]
+        }
+      ],
+      "refresh": "10s",
+      "schemaVersion": 39,
+      "tags": [
+        "service-launchpad",
+        "recommendation",
+        "k6"
+      ],
+      "templating": {
+        "list": []
+      },
+      "time": {
+        "from": "now-30m",
+        "to": "now"
+      },
+      "timepicker": {},
+      "timezone": "",
+      "title": "Recommendation Service",
+      "uid": "recommendation-service",
+      "version": 1
+    }

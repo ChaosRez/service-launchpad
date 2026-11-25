@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: recommendation-service-config
+  namespace: service-launchpad-reco
+  labels:
+    app.kubernetes.io/name: recommendation-service
+    app.kubernetes.io/part-of: service-launchpad
+data:
+  VALKEY_URL: redis://valkey.service-launchpad-reco.svc.cluster.local:6379
+  # Latency budget per Valkey read; past this the request moves down the fallback chain.
+  VALKEY_COMMAND_TIMEOUT_MS: "25"
+  BREAKER_FAILURE_THRESHOLD: "20"
+  BREAKER_COOLDOWN_MS: "1000"
+  ACTIVE_VERSION_TTL_MS: "5000"
+  EXPERIMENT_NAME: brand-diversity-v1
+  EXPERIMENT_TREATMENT_PERCENT: "50"
+  BRAND_CAP: "2"
+  LOG_LEVEL: info

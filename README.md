@@ -135,6 +135,8 @@ See the [production runbook](docs/production-platform-runbook.md) and [network/a
 | --- | --- |
 | [`services/control-plane`](services/control-plane) | Go API, policy enforcement, resource rendering, cluster apply, metrics, and audit recording. |
 | [`services/fastapi-service`](services/fastapi-service) | Observable inference-style sample workload. |
+| [`services/recommendation-service`](services/recommendation-service) | Node.js/TypeScript recommendation feed on Valkey: multi-tier cache, fallback chain, diversity A/B. |
+| [`k8s/recommendation`](k8s/recommendation) | Dev K3s autoscaling demo: Valkey, HPA, reverse-ETL seed Job, always-on k6 load, runbook. |
 | [`k8s`](k8s) | Local resources, monitoring stack, and production overlays. |
 | [`infra/terraform`](infra/terraform) | GCP environments and reusable GKE infrastructure. |
 | [`loadtests/k6`](loadtests/k6) | In-cluster workload traffic generation. |

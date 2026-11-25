@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: recommendation-service
+  namespace: service-launchpad-reco
+  labels:
+    app.kubernetes.io/name: recommendation-service
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: service-launchpad
+spec:
+  # No `replicas` field: the HPA owns the replica count. Declaring it here would make every
+  # `kubectl apply` reset the Deployment to that number and fight the autoscaler.
+  revisionHistoryLimit: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: recommendation-service
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: recommendation-service
+        app.kubernetes.io/component: api
+        app.kubernetes.io/part-of: service-launchpad
+    spec:
+      terminationGracePeriodSeconds: 20
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000 # the `node` user in node:alpine
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: recommendation-service
+          image: service-launchpad/recommendation-service:dev
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: recommendation-service-config
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 6
+          lifecycle:
+            # Give kube-proxy/endpoints time to drop this pod before Fastify stops accepting,
+            # so scale-down does not surface as connection errors in k6.
+            preStop:
+              exec:
+                command: ["sleep", "5"]
+          # Node runs JS on one thread, so >1 core of limit buys little. The request is
+          # deliberately small: HPA utilisation is measured against the request, and a small
+          # request makes scale-out visible at demo-sized load. Re-size from measured
+          # CPU-per-request before using these numbers anywhere real.
+          resources:
+            requests:
+              cpu: 200m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]

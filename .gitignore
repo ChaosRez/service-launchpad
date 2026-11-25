@@ -20,6 +20,7 @@ terraform.rc
 
 # --- Kubernetes / Helm / Kustomize ---
 *.kubeconfig
+*-kubeconfig
 .kube/
 kubeconfig
 kustomization.rendered.yaml
@@ -51,6 +52,9 @@ __pycache__/
 .venv/
 venv/
 
+# --- Node.js ---
+node_modules/
+
 # --- Local env files ---
 .env
 .env.local
@@ -66,3 +70,7 @@ temp/
 Thumbs.db
 .vscode/
 .idea/
+
+
+
+.codex/

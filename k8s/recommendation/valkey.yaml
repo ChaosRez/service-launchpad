@@ -1,0 +1,100 @@
+# Single-node Valkey used as the hot store for offline model outputs.
+#
+# Persistence is off on purpose: the source of truth is the offline pipeline, and the loader can
+# rebuild the store in seconds. If Valkey restarts empty, the service keeps serving the static
+# fallback until the seed Job is re-run, which is exactly the failure mode we want to observe.
+#
+# maxmemory-policy=noeviction: a model load that does not fit should fail loudly in the loader,
+# not silently evict the reco:active pointer or half of the user lists.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: valkey
+  namespace: service-launchpad-reco
+  labels:
+    app.kubernetes.io/name: valkey
+    app.kubernetes.io/component: hot-store
+    app.kubernetes.io/part-of: service-launchpad
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: valkey
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: valkey
+        app.kubernetes.io/component: hot-store
+        app.kubernetes.io/part-of: service-launchpad
+    spec:
+      containers:
+        - name: valkey
+          image: valkey/valkey:8.1.4-alpine
+          args:
+            - valkey-server
+            - --save
+            - ""
+            - --appendonly
+            - "no"
+            - --maxmemory
+            - 512mb
+            - --maxmemory-policy
+            - noeviction
+          ports:
+            - name: valkey
+              containerPort: 6379
+          readinessProbe:
+            exec:
+              command: ["valkey-cli", "ping"]
+            periodSeconds: 5
+            timeoutSeconds: 2
+          livenessProbe:
+            tcpSocket:
+              port: valkey
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 768Mi
+        # Exposes ops/sec, memory, connected clients, and keyspace stats for Grafana.
+        - name: exporter
+          image: oliver006/redis_exporter:v1.77.0
+          env:
+            - name: REDIS_ADDR
+              value: redis://localhost:6379
+          ports:
+            - name: metrics
+              containerPort: 9121
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: valkey
+  namespace: service-launchpad-reco
+  labels:
+    app.kubernetes.io/name: valkey
+    app.kubernetes.io/part-of: service-launchpad
+spec:
+  selector:
+    app.kubernetes.io/name: valkey
+  ports:
+    - name: valkey
+      port: 6379
+      targetPort: valkey
+    - name: metrics
+      port: 9121
+      targetPort: metrics
+  type: ClusterIP

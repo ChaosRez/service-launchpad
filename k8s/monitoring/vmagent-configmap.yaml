@@ -33,6 +33,20 @@ data:
         static_configs:
           - targets:
               - fastapi-service.service-launchpad-dev.svc.cluster.local:8000
+      # One target per recommendation-service pod via the headless Service, so per-pod CPU,
+      # event-loop lag, and latency stay correct while the HPA adds and removes pods.
+      - job_name: recommendation-service
+        metrics_path: /metrics
+        dns_sd_configs:
+          - names:
+              - recommendation-service-metrics.service-launchpad-reco.svc.cluster.local
+            type: A
+            port: 8080
+            refresh_interval: 15s
+      - job_name: valkey
+        static_configs:
+          - targets:
+              - valkey.service-launchpad-reco.svc.cluster.local:9121
       - job_name: control-plane
         metrics_path: /metrics
         static_configs:

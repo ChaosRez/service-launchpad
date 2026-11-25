@@ -62,3 +62,5 @@ spec:
                   name: grafana-k6-dashboard
               - configMap:
                   name: grafana-storage-comparison-dashboard
+              - configMap:
+                  name: grafana-recommendation-dashboard

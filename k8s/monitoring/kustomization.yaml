@@ -32,5 +32,6 @@ resources:
   - grafana-control-plane-dashboard-configmap.yaml
   - grafana-k6-dashboard-configmap.yaml
   - grafana-storage-comparison-dashboard-configmap.yaml
+  - grafana-recommendation-dashboard-configmap.yaml
   - grafana-deployment.yaml
   - grafana-service.yaml

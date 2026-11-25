@@ -51,6 +51,7 @@ kubectl port-forward svc/loki 3100:3100 -n service-launchpad-observability
 
 - `vmagent` scrapes `fastapi-service`, the local host control-plane via `host.minikube.internal:8080`, `kube-state-metrics`, `VictoriaMetrics`, and `Mimir`, then remote-writes the resulting series to both metric stores
 - `kube-state-metrics` is scraped for replica and autoscaler views
+- `recommendation-service` is scraped through `dns_sd_configs` on a headless Service, so every pod is its own target while the HPA scales; a static ClusterIP target would sample one random pod per scrape
 - trace export is configured through the `fastapi-service` ConfigMap in `k8s/base`
 - `promtail` tails Kubernetes pod logs from `/var/log/pods` and ships them to `Loki` with pod metadata labels
 - the Promtail DaemonSet exports `HOSTNAME` from the Kubernetes node name so pod discovery only keeps log files local to each node
@@ -60,6 +61,7 @@ kubectl port-forward svc/loki 3100:3100 -n service-launchpad-observability
   - `Control Plane Observability` for scrape health, managed service count, registrations, deployments, and deployment duration
   - `k6 Load Testing` for generator request rate, duration, failure rate, and VUs
   - `Metrics Storage Comparison` for side-by-side local vs long-term store queries
+  - `Recommendation Service` for the dev K3s recommendation demo: offered vs served load, latency vs SLO, HPA replicas, per-pod CPU and event-loop lag, fallback coverage, A/B diversity, cache tiers, and Valkey (see `k8s/recommendation/README.md`)
 - Grafana provisions the dashboard into the `Service Launchpad` folder on startup
 - The `Control Plane Observability` dashboard is scoped to local Minikube. Its control-plane panels depend on `vmagent` scraping `host.minikube.internal:8080/metrics`; they do not represent Cloud Run production metrics.
 - Production should run the same LGTM-style stack in `GKE production`, not on the developer machine. For the Cloud Run control plane, keep `/metrics` for authenticated ad hoc inspection and use Cloud Logging as the first log capture point.

@@ -58,6 +58,32 @@ jobs:
       - name: Build FastAPI image
         run: docker build -t service-launchpad/fastapi-service:ci .
 
+  recommendation-service:
+    name: Recommendation service
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/recommendation-service
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: services/recommendation-service/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check, build, and run unit tests
+        run: npm test
+
+      - name: Build recommendation-service image
+        run: docker build -t service-launchpad/recommendation-service:ci .
+
   terraform:
     name: Terraform dev
     runs-on: ubuntu-latest
@@ -100,6 +126,16 @@ jobs:
       - name: Render monitoring manifests
         run: kubectl kustomize k8s/monitoring >"${RUNNER_TEMP}/service-launchpad-monitoring.yaml"
 
+      - name: Render recommendation manifests
+        run: |
+          {
+            kubectl kustomize k8s/recommendation
+            echo "---"
+            cat k8s/recommendation/load/k6-load-generator.yaml
+          } >"${RUNNER_TEMP}/service-launchpad-recommendation.yaml"
+          # generateName Jobs are created, not applied; validate the file on its own.
+          cp k8s/recommendation/jobs/seed-job.yaml "${RUNNER_TEMP}/service-launchpad-recommendation-seed.yaml"
+
       - name: Render production workload overlay
         run: kubectl kustomize k8s/overlays/prod >"${RUNNER_TEMP}/service-launchpad-prod.yaml"
 
@@ -141,3 +177,13 @@ jobs:
             -strict \
             -summary \
             /manifests/service-launchpad-prod-observability.yaml
+
+      - name: Validate recommendation manifests
+        run: |
+          docker run --rm \
+            -v "${RUNNER_TEMP}:/manifests:ro" \
+            ghcr.io/yannh/kubeconform:v0.6.7 \
+            -strict \
+            -summary \
+            /manifests/service-launchpad-recommendation.yaml \
+            /manifests/service-launchpad-recommendation-seed.yaml

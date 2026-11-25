@@ -1,0 +1,42 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: recommendation-service
+  namespace: service-launchpad-reco
+  labels:
+    app.kubernetes.io/name: recommendation-service
+    app.kubernetes.io/part-of: service-launchpad
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: recommendation-service
+  minReplicas: 2 # survive one pod restart without dropping to zero capacity
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 50 # leave headroom: Node latency degrades before CPU hits 100%
+  behavior:
+    # Scale out fast: a traffic spike must not wait for a stabilisation window.
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      selectPolicy: Max
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 15
+        - type: Pods
+          value: 4
+          periodSeconds: 15
+    # Scale in slowly: avoid flapping when load oscillates around a threshold.
+    scaleDown:
+      stabilizationWindowSeconds: 120
+      selectPolicy: Min
+      policies:
+        - type: Percent
+          value: 50
+          periodSeconds: 60
